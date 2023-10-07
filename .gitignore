@@ -1,2 +1,5 @@
 test.py
 CodeStyle.md
+venv
+.idea
+.mypy_cache
