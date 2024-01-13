@@ -1,0 +1,31 @@
+<html>
+  <head>
+    <title>This is the title of the webpage!</title>
+  </head>
+  <body>
+    <form name="user_form">
+      <input type="text" name="user_name" value="name" />
+      <input type="text" name="user_gender" value="gender" />
+      <input type="text" name="user_debit_card_name" value="card" />
+      <input type="text" name="user_email" value="email" />
+      <input
+        type="button"
+        name="submit form"
+        value="submit"
+        onclick="onClick()"
+      />
+    </form>
+    <script>
+      function onClick() {
+        const name = document.getElementsByName("user_name").value;
+        const gender = document.getElementsByName("user_gender").value;
+        const debit_card_number = document.getElementsByName(
+          "user_debit_card_name",
+        ).value;
+        const email = document.getElementsByName("user_email").value;
+        console.log(name);
+      }
+    </script>
+    <!-- <script src="index.js" /> -->
+  </body>
+</html>

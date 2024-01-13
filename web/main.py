@@ -1,44 +1,32 @@
 from fastapi import FastAPI
-from pydantic import BaseModel
-from starlette.responses import JSONResponse, HTMLResponse
-
-
-class User(BaseModel):
-    name: str
-    age: int
-    gender: str
-    phone: str
+from starlette.responses import FileResponse, JSONResponse, Response
+from fastapi.staticfiles import StaticFiles
+from web.db import Database, User
+from sys import stderr
 
 
 app = FastAPI()
 
+app.mount("/static", StaticFiles(directory="web/static", html=True), name="static")
+
+database = Database()
+
 
 @app.get("/")
 async def home():
-    return HTMLResponse(
-        content="""
-        <html>
-        <head>
-<style>
-body {
-  color: brown;
-}
-</style>
-</head>
-<body>
-            <h1 style="color: 55FF00;"> Hello world </h1>
-        </body>
-        </html>
-    """
-    )
+    return FileResponse("/static/index.html")
 
 
 @app.get("/users/{user_id}")
 async def read_user(user_id: int):
-    print(user_id)
-    return JSONResponse({"user_id": user_id})
+    user = await database.get_user(user_id)
+    if user is None:
+        return JSONResponse({}, status_code=404)
+    return JSONResponse(user.__dict__)
 
 
-@app.post("/users/new/{user_id}")
-async def create_user(user: User, user_id: int):
-    return JSONResponse({"user": user.name})
+@app.post("/users/new")
+async def create_user(user: User):
+    print(user, file=stderr)
+    await database.add_user(user)
+    return Response(status_code=200)
