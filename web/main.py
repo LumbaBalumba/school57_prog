@@ -1,9 +1,8 @@
 from fastapi import FastAPI
-from starlette.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from web.db import Database, User
 from sys import stderr
-
 
 app = FastAPI()
 
@@ -14,7 +13,7 @@ database = Database()
 
 @app.get("/")
 async def home():
-    return FileResponse("/static/index.html")
+    return FileResponse("web/static/index.html")
 
 
 @app.get("/users/{user_id}")
