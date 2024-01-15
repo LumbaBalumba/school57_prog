@@ -3,3 +3,6 @@ CodeStyle.md
 .venv
 .idea
 .mypy_cache
+node_modules
+*.lock
+*/__pycache
