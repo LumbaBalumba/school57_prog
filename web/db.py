@@ -16,13 +16,14 @@ class Database:
     def __init__(self) -> None:
         self.container = {}
 
-    async def add_user(self, user: User) -> None:
+    async def add_user(self, user: User) -> int:
         if not self.container:
             new_id = 1
         else:
             new_id = max(self.container.keys()) + 1
         sleep(1)
         self.container[new_id] = user
+        return new_id
 
     async def delete_user(self, id: int) -> None:
         sleep(1)
