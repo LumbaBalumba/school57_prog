@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from web.src.db import Database, User
+from web.db import Database, User
 
 app = FastAPI()
 
