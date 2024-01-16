@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from web.db import Database, User
+from web.src.db import Database, User
 
 app = FastAPI()
 
@@ -12,12 +12,12 @@ database = Database()
 
 @app.get("/")
 async def home():
-    return FileResponse("web/static/index.html")
+    return FileResponse("web/static/html/index.html")
 
 
 @app.get("/favicon.ico")
 async def favicon():
-    return FileResponse("web/static/favicon.ico")
+    return FileResponse("web/static/images/favicon.ico")
 
 
 @app.get("/users/{user_id}/")
@@ -26,6 +26,11 @@ async def read_user(user_id: int):
     if user is None:
         return JSONResponse(content={}, status_code=404)
     return JSONResponse(content=user.__dict__)
+
+
+@app.get("/hello/")
+async def hello():
+    return FileResponse("web/static/html/hello.html")
 
 
 @app.post("/users/new/")

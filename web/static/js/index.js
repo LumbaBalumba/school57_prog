@@ -24,5 +24,6 @@ function onRegisterButtonClick() {
     .then((text) => JSON.parse(text))
     .then((json) => json.user_id)
     .then((user_id) => sessionStorage.setItem("user_id", user_id.toString()))
-    .catch((error) => console.error(error));
+    .catch((error) => console.log(error));
+  window.location.replace("http://localhost:8000/hello/");
 }
