@@ -15,7 +15,12 @@ async def home():
     return FileResponse("web/static/index.html")
 
 
-@app.get("/users/{user_id}")
+@app.get("/favicon.ico")
+async def favicon():
+    return FileResponse("web/static/favicon.ico")
+
+
+@app.get("/users/{user_id}/")
 async def read_user(user_id: int):
     user = await database.get_user(user_id)
     if user is None:

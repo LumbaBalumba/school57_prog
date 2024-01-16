@@ -1,4 +1,4 @@
-async function onClick() {
+function onRegisterButtonClick() {
   const name = document.getElementById("user_name").value;
   const gender =
     document.getElementById("user_gender").value == "male" ? true : false;
@@ -8,7 +8,7 @@ async function onClick() {
   const email = document.getElementById("user_email").value;
 
   const url = "http://localhost:8000/users/new/";
-  let response = await fetch(url, {
+  fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -19,6 +19,10 @@ async function onClick() {
       debit_card_number: debit_card_number,
       email: email,
     }),
-  });
-  console.log(response.json());
+  })
+    .then((response) => response.text())
+    .then((text) => JSON.parse(text))
+    .then((json) => json.user_id)
+    .then((user_id) => sessionStorage.setItem("user_id", user_id.toString()))
+    .catch((error) => console.error(error));
 }
