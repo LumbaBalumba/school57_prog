@@ -4,5 +4,5 @@ CodeStyle.md
 .idea
 .mypy_cache
 node_modules
-*/__pycache
+*/__pycache__
 package-lock.json
