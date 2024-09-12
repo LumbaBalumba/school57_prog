@@ -1,8 +1,8 @@
 test.py
 CodeStyle.md
-.venv
-.idea
-.mypy_cache
-node_modules
+**..mypy_cache
+**/.venv
+**/.idea
+**/node_modules
 */__pycache__
-package-lock.json
+**/package-lock.json
