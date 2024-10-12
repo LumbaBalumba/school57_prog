@@ -9,6 +9,8 @@ def count(f):
     return wrapped
 
 
+# func = dec(func)
+
 # @override
 
 
@@ -29,6 +31,15 @@ def benchmark(iters=1):
         return wrapper
 
     return actual_decorator
+
+
+@benchmark(iters=4)
+def func(n):
+    return 1 if n == 0 else n * func(n - 1)
+
+
+# dec = benchmark(iters=4)
+# func = dec(func)
 
 
 def time_count(f):
@@ -56,6 +67,9 @@ def squared(f):
 # @benchmark(iters=5)
 def hello(name: str) -> str:
     return f"Hello, {name}"
+
+
+# hello = time_count(count(hello))
 
 
 @count
