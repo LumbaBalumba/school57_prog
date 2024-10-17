@@ -16,7 +16,7 @@
     - [Портал открытых данных правительства Москвы](https://data.mos.ru/opendata),
     - [Портал открытых данных МинКульта РФ](https://opendata.mkrf.ru/opendata),
     - [Austin R. Benson's open datasets](https://www.cs.cornell.edu/~arb/data/).
-  - Заполнить [табличку](https://docs.google.com/spreadsheets/d/1LA2-dToEb3uJ5sVop_hBHZTwlmYJyqhJfKJuaDXfE5s/edit?usp=sharing) с информацией о вашем датасете.<br>
+  - Заполнить [табличку](https://docs.google.com/spreadsheets/d/1-lgW7RNoM9jqNGENzOkEDkxihJjOuQtgsinv7t77CxE/edit?usp=sharing) с информацией о вашем датасете.<br>
     Повторяться **нельзя**, так что следите за тем, что выбрали ваши одноклассники.
 - Каждый из подпунктов задания, кроме нулевого, должен включать в себя <mark style="background: #FF5733;">три этапа</mark>:
   1.  Исследовательский вопрос или гипотеза.<br>
