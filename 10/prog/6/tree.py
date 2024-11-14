@@ -13,6 +13,7 @@ class Node[T]:
     value: T
     left: Node[T] | None
     right: Node[T] | None
+    parent: Node[T] | None
     predicate: Callable[[T, T], Compare]
 
     def __init__(self, value: T, predicate: Callable[[T, T], Compare]) -> None:
@@ -20,6 +21,7 @@ class Node[T]:
         self.predicate = predicate
         self.left = None
         self.right = None
+        self.parent = None
 
     def correct(self) -> bool:
         if self.left is not None:
