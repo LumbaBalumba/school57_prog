@@ -1,6 +1,7 @@
 from __future__ import annotations
+from abc import ABCMeta, abstractmethod
 from enum import Enum, auto
-from typing import Callable
+from typing import Any, Callable
 
 
 class Compare(Enum):
@@ -9,14 +10,33 @@ class Compare(Enum):
     Greater = auto()
 
 
-class Node[T]:
+class Comparable(metaclass=ABCMeta):
+    @abstractmethod
+    def __lt__(self, other: Any) -> bool: ...
+
+    @abstractmethod
+    def __gt__(self, other: Any) -> bool: ...
+
+    @abstractmethod
+    def __eq__(self, other: Any) -> bool: ...
+
+
+class Node[T: Comparable]:
     value: T
     left: Node[T] | None
     right: Node[T] | None
     parent: Node[T] | None
     predicate: Callable[[T, T], Compare]
 
-    def __init__(self, value: T, predicate: Callable[[T, T], Compare]) -> None:
+    def __init__(
+        self,
+        value: T,
+        predicate: Callable[[T, T], Compare] = lambda first, second: (
+            Compare.Less
+            if first < second
+            else (Compare.Equal if first == second else Compare.Greater)
+        ),
+    ) -> None:
         self.value = value
         self.predicate = predicate
         self.left = None
