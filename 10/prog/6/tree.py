@@ -45,5 +45,5 @@ class Node[T]:
     merge(self, other: Node[T]) -> None
 
     class Set (add, delete,  &,  | , is_subset,  is_empty, __init__(self, collection: Iterable[T]), Iterable)
-    class Dict(add, [], __init__(self, collection: Iterable[T]), Iterable)
+    class Dict([], __init__(self, collection: Iterable[T]), Iterable)
     """
