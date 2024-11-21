@@ -95,7 +95,7 @@ class Node[T: Comparable]:
     merge(self, other: Node[T]) -> None
 
     class Set[T] (add, delete,  &,  | , is_subset,  is_empty, __init__(self, collection: Iterable[T]), __contains__)
-    class Dict[K, V] ([K] -> V, __init__(self, collection: Iterable[tuple[K, V]]), __contains__, __deleteitem__)
+    class Dict[K, V] ([K] -> V, __init__(self, collection: Iterable[tuple[K, V]]), __contains__, удаление по индексу)
 
 
     На дополнительную оценку можно написать тесты для своего кода, покрывающие классы Node, Set, Dict
