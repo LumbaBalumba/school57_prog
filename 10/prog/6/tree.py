@@ -56,6 +56,36 @@ class Node[T: Comparable]:
                 return False
         return True
 
+    def add(self, value: T) -> None:
+        match self.predicate(value, self.value):
+            case Compare.Less:
+                if self.left is None:
+                    self.left = Node(value, self.predicate)
+                else:
+                    self.left.add(value)
+            case Compare.Greater:
+                if self.right is None:
+                    self.right = Node(value, self.predicate)
+                else:
+                    self.right.add(value)
+            case Compare.Equal:
+                pass
+
+    def search(self, value: T) -> Node[T] | None:
+        match self.predicate(value, self.value):
+            case Compare.Less:
+                if self.left is None:
+                    return None
+                else:
+                    return self.left.search(value)
+            case Compare.Equal:
+                return self
+            case Compare.Greater:
+                if self.right is None:
+                    return None
+                else:
+                    return self.right.search(value)
+
     """
     Написать следующие методы:
     add(self, value: T) -> None
