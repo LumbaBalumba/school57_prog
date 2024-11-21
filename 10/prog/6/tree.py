@@ -94,6 +94,6 @@ class Node[T: Comparable]:
     to_list(self) -> list[T]
     merge(self, other: Node[T]) -> None
 
-    class Set (add, delete,  &,  | , is_subset,  is_empty, __init__(self, collection: Iterable[T]), __in__)
-    class Dict([], __init__(self, collection: Iterable[T]), __in__)
+    class Set[T] (add, delete,  &,  | , is_subset,  is_empty, __init__(self, collection: Iterable[T]), __in__)
+    class Dict[K, V] ([K] -> V, __init__(self, collection: Iterable[tuple[K, V]]), __in__)
     """
