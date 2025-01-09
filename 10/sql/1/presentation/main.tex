@@ -1,0 +1,262 @@
+\documentclass{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage[T2A]{fontenc}
+\usepackage[russian]{babel}
+
+\usetheme{Madrid}
+\usecolortheme{default}
+
+\title{Введение в базы данных}
+\subtitle{Основные определения, SQL и пример на SQLite}
+\author{Лазар В. И., Козлова Е. Р.}
+\date{\today}
+
+\begin{document}
+
+\begin{frame}
+	\titlepage
+\end{frame}
+
+% Слайд 1: План занятия
+\begin{frame}{План занятия}
+	\tableofcontents
+\end{frame}
+
+% Секция 1: Введение
+\section{Основные определения}
+\begin{frame}{Что такое база данных?}
+	\begin{itemize}
+		\item \textbf{База данных (БД)} --- это организованная совокупность данных,
+		      структурированная таким образом, чтобы упростить хранение, обработку и поиск информации.
+		\item \textbf{Таблица} --- одна из основных структур хранения данных.
+		      Состоит из строк (записей) и столбцов (полей).
+		\item \textbf{Первичный ключ (Primary Key)} --- уникальный идентификатор для каждой строки в таблице.
+		\item \textbf{СУБД (DBMS)} --- система управления базами данных (например, MySQL, PostgreSQL, SQLite).
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Основные свойства баз данных}
+	\begin{itemize}
+		\item \textbf{Целостность данных}
+		\item \textbf{Безопасность и надёжность}
+		\item \textbf{Высокая производительность}
+		\item \textbf{Масштабируемость}
+	\end{itemize}
+\end{frame}
+
+% Секция 2: SQL и SQLite
+\section{SQL и SQLite}
+\begin{frame}{Что такое SQL?}
+	\begin{itemize}
+		\item \textbf{SQL (Structured Query Language)} --- язык структурированных запросов,
+		      позволяющий взаимодействовать с базой данных.
+		\item Используется для:
+		      \begin{itemize}
+			      \item создания и модификации схемы БД (\texttt{CREATE}, \texttt{ALTER}, \texttt{DROP});
+			      \item управления данными (\texttt{INSERT}, \texttt{UPDATE}, \texttt{DELETE});
+			      \item выборки данных (\texttt{SELECT}).
+		      \end{itemize}
+		\item \textbf{SQLite} --- лёгкая встраиваемая СУБД, которая хранит всю базу в одном файле.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Типы данных в SQL}
+	\begin{itemize}
+		\item \texttt{CHAR(size)} - строка фиксированного размера size
+		\item \texttt{VARCHAR(size)} - строка переменной длины длины не более size
+		\item \texttt{BOOL/BOOLEAN}
+		\item \texttt{SMALLINT, MEDIUMINT, INT/INTEGER} - целые числа (16, 32 и 64 бита сответственно)
+		\item \texttt{FLOAT, DOUBLE} - числа с плавающей точкой размером 32 и 64 бита соответственно
+		\item \texttt{DATE, TIME, DATETIME, TIMESTAMP}
+	\end{itemize}
+	Также в любой* колонке могут встречаться \textbf{NULL}-значения.
+\end{frame}
+
+% Секция 3: Конструкция SELECT
+\section{Конструкция SELECT}
+\begin{frame}{Общая форма SELECT}
+	\textbf{Основной синтаксис запроса:}
+	\begin{block}{Синтаксис}
+		\texttt{SELECT <столбцы или выражения>\newline
+			FROM <название\_таблицы>\newline
+			[WHERE <условие>]\newline
+			[GROUP BY <столбцы>]\newline
+			[HAVING <условие\_для\_групп>]\newline
+			[ORDER BY <столбцы> [ASC|DESC]]\newline
+			[LIMIT <количество\_строк>];}
+	\end{block}
+\end{frame}
+
+\begin{frame}
+	\begin{itemize}
+		\item \textbf{SELECT} указывает, какие столбцы (или вычисления) нужно вывести.
+		\item \textbf{FROM} указывает, из какой таблицы получаем данные.
+		\item \textbf{WHERE} --- условие фильтрации строк.
+		\item \textbf{GROUP BY} --- группировка по одному или нескольким столбцам.
+		\item \textbf{HAVING} --- условие для отфильтрованных групп.
+		\item \textbf{ORDER BY} --- сортировка (по возрастанию или убыванию).
+		\item \textbf{LIMIT} --- ограничивает количество возвращаемых строк.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Пример 1: Простой запрос}
+	\textbf{Структура таблицы \texttt{employees}:}
+	\begin{itemize}
+		\item \texttt{id} (PRIMARY KEY)
+		\item \texttt{name}
+		\item \texttt{position}
+		\item \texttt{salary}
+	\end{itemize}
+
+	\textbf{Запрос:}
+	\begin{verbatim}
+SELECT name, position
+FROM employees;
+\end{verbatim}
+
+	\textbf{Описание:}
+	Этот запрос вернёт столбцы \texttt{name} и \texttt{position} из таблицы \texttt{employees}.
+\end{frame}
+
+\begin{frame}[fragile]{Пример 2: Фильтрация (WHERE)}
+	\begin{verbatim}
+SELECT name, salary
+FROM employees
+WHERE salary > 50000;
+\end{verbatim}
+	\begin{itemize}
+		\item Возвращает только тех сотрудников, у которых \texttt{salary} превышает 50000.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Математические операции}
+	\begin{itemize}
+		\item Стандартные математические операции: \texttt{+, -, *, /, \%}
+		\item Битовые операции: \texttt{\&, \^ \;, $\vert, \sim$}
+		\item Операции сравнения: \texttt{>, <, <=, >=, =, <>, BETWEEN}
+		\item Логические операции: \texttt{AND, OR, NOT, ALL, ANY/SOME, IN, LIKE, IS NULL, IS NOT NULL}
+		\item Приведение типов: \texttt{cast(column\_name as type)}
+	\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Пример 3: использование математических операций}
+	\begin{verbatim}
+SELECT DISTINCT depratment
+FROM employees
+WHERE (name IN ('Саша', 'Маша', 'Петя')
+       AND
+       department = 'IT')
+      OR salary / work_hours >= 5000;
+    \end{verbatim}
+	\texttt{DISTINCT} - уникальные значения в колонке
+\end{frame}
+
+
+\begin{frame}[fragile]{Пример 4: Сортировка (ORDER BY) и LIMIT}
+	\begin{verbatim}
+SELECT name, salary
+FROM employees
+ORDER BY salary DESC
+LIMIT 3;
+\end{verbatim}
+	\begin{itemize}
+		\item Сортирует сотрудников по убыванию \texttt{salary}.
+		\item Показывает только первые 3 строки (самые высокие зарплаты).
+	\end{itemize}
+	\texttt{ASC} - сортировка по возрастанию, \texttt{DESC} - сортировка по убыванию
+\end{frame}
+
+\begin{frame}[fragile]{Aliasing (псевдонимы)}
+	\begin{itemize}
+		\item \textbf{Aliasing} позволяет давать временные имена столбцам или таблицам.
+		\item Удобно при использовании вычисляемых полей или при работе с длинными названиями таблиц.
+	\end{itemize}
+
+	\textbf{Пример: использование псевдонима столбца}
+	\begin{verbatim}
+SELECT name AS employee_name,
+       salary * 1.2 AS new_salary
+FROM employees;
+\end{verbatim}
+	\begin{itemize}
+		\item \texttt{AS} задаёт псевдоним для отображаемого столбца.
+		\item В результате в итоговой выборке столбец будет называться \texttt{employee\_name},
+		      а второй --- \texttt{new\_salary}.
+	\end{itemize}
+
+	\textbf{Пример: псевдоним таблицы}
+	\begin{verbatim}
+SELECT e.name, e.position
+FROM employees AS e;
+\end{verbatim}
+\end{frame}
+
+\begin{frame}[fragile]{Аггрегирующие функции}
+	\begin{itemize}
+		\item \texttt{MIN} - минимальное значение в колонке
+		\item \texttt{MAX} - максиммальное значение в колонке
+		\item \texttt{AVG} - среднее значение в колонке
+		\item \texttt{SUM} - сумма значений в колонке
+		\item \texttt{COUNT} - количество значений в колонке
+	\end{itemize}
+	Важно: все аггрегирующие функции игнорируют \textbf{NULL}-значения кроме \texttt{COUNT}.
+\end{frame}
+
+\begin{frame}[fragile]{Пример 5: Группировка (GROUP BY) и HAVING}
+	\begin{verbatim}
+SELECT position, AVG(salary) AS avg_salary
+FROM employees
+GROUP BY position
+HAVING AVG(salary) > 40000;
+\end{verbatim}
+	\begin{itemize}
+		\item Группирует сотрудников по должности (\texttt{position}).
+		\item Считает среднюю зарплату по каждой должности.
+		\item Оставляет только те должности, где средняя зарплата больше 40000.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Пример 6: простые вложенные запросы}
+	\begin{verbatim}
+SELECT *
+FROM employees
+WHERE salary = (SELECT MAX(salary) FROM employees);
+    \end{verbatim}
+\end{frame}
+
+\begin{frame}[fragile]{Средства работы с SQLite}
+	\begin{itemize}
+		\item SQLiteStudio
+		\item PyCharm Professional Edition
+		\item Visual Studio Code (SQL plugin)
+		\item Vim/Neovim (dadbod plugin)
+	\end{itemize}
+\end{frame}
+
+\section{Задания}
+
+\begin{frame}[fragile]{Задания для factbook.db}
+	\begin{itemize}
+		\item Подключитесь к БД
+		\item Сколько в ней таблиц?
+		\item Для каждой таблицы в БД напишите запрос, получающий первые 10 строк любых двух колонок из этой таблицы
+		\item Напишите запрос, получающий топ-20 столиц по населению
+		\item Напишите запрос, получающий последние 10 строк любых двух колонок из таблицы facts
+		\item Напишите запрос, получающий новую колонку \texttt{Population\_\%}, содержащую информацию о доле населения в городе относительно населения всех городов представленных в таблице
+		\item Напишите запрос, получающий все строки, содержащие \textbf{NULL} хотя бы в одной колонке
+		\item Выведите топ-10 стран по населению (facts\_id - идентификатор страны)
+	\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Задания для jobs.db}
+	\begin{itemize}
+		\item Подключитесь к БД
+		\item Напишите запрос, получающий все категории занятости (Major\_category), где сумма по всем сферам долей занятости женщин более 5
+		\item Напишите запрос, получающий процентную долю мужчин в каждой сфере занятости (Major)
+		\item Напишите запрос, получающий топ-10 сфер занятости по доли занятости женщин в этой сфере при условии что женщин не более 0.8 и не менее 0.5 от общего числа
+		\item Напиште запрос, получающий все сферы занятости, где доля женщин более половины от общего числа либо менее, но при условии, что сфера занятости попадает в категорию \texttt{Engineering}
+		\item Напишите запрос, получающий катеоргии занятости, для которых показатель женской занятости (из задания 1) находится в промежутке от 3 до 5
+	\end{itemize}
+\end{frame}
+
+\end{document}
