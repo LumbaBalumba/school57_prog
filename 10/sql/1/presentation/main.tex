@@ -95,7 +95,7 @@
 		\item \textbf{GROUP BY} --- группировка по одному или нескольким столбцам.
 		\item \textbf{HAVING} --- условие для отфильтрованных групп.
 		\item \textbf{ORDER BY} --- сортировка (по возрастанию или убыванию).
-		\item \textbf{LIMIT} --- ограничивает количество возвращаемых строк.
+		\item \textbf{LIMIT} --- ограничение количества возвращаемых строк.
 	\end{itemize}
 \end{frame}
 
@@ -139,9 +139,9 @@ WHERE salary > 50000;
 	\end{itemize}
 \end{frame}
 
-\begin{frame}[fragile]{Пример 3: использование математических операций}
+\begin{frame}[fragile]{Пример 3: Использование математических операций}
 	\begin{verbatim}
-SELECT DISTINCT depratment
+SELECT DISTINCT department
 FROM employees
 WHERE (name IN ('Саша', 'Маша', 'Петя')
        AND
@@ -172,7 +172,7 @@ LIMIT 3;
 		\item Удобно при использовании вычисляемых полей или при работе с длинными названиями таблиц.
 	\end{itemize}
 
-	\textbf{Пример: использование псевдонима столбца}
+	\textbf{Пример: Использование псевдонима столбца}
 	\begin{verbatim}
 SELECT name AS employee_name,
        salary * 1.2 AS new_salary
@@ -184,7 +184,7 @@ FROM employees;
 		      а второй --- \texttt{new\_salary}.
 	\end{itemize}
 
-	\textbf{Пример: псевдоним таблицы}
+	\textbf{Пример: Псевдоним таблицы}
 	\begin{verbatim}
 SELECT e.name, e.position
 FROM employees AS e;
@@ -194,7 +194,7 @@ FROM employees AS e;
 \begin{frame}[fragile]{Аггрегирующие функции}
 	\begin{itemize}
 		\item \texttt{MIN} - минимальное значение в колонке
-		\item \texttt{MAX} - максиммальное значение в колонке
+		\item \texttt{MAX} - максимальное значение в колонке
 		\item \texttt{AVG} - среднее значение в колонке
 		\item \texttt{SUM} - сумма значений в колонке
 		\item \texttt{COUNT} - количество значений в колонке
@@ -216,7 +216,7 @@ HAVING AVG(salary) > 40000;
 	\end{itemize}
 \end{frame}
 
-\begin{frame}[fragile]{Пример 6: простые вложенные запросы}
+\begin{frame}[fragile]{Пример 6: Простые вложенные запросы}
 	\begin{verbatim}
 SELECT *
 FROM employees
@@ -255,7 +255,7 @@ WHERE salary = (SELECT MAX(salary) FROM employees);
 		\item Напишите запрос, получающий процентную долю мужчин в каждой сфере занятости (Major)
 		\item Напишите запрос, получающий топ-10 сфер занятости по доли занятости женщин в этой сфере при условии что женщин не более 0.8 и не менее 0.5 от общего числа
 		\item Напиште запрос, получающий все сферы занятости, где доля женщин более половины от общего числа либо менее, но при условии, что сфера занятости попадает в категорию \texttt{Engineering}
-		\item Напишите запрос, получающий катеоргии занятости, для которых показатель женской занятости (из задания 1) находится в промежутке от 3 до 5
+		\item Напишите запрос, получающий категории занятости, для которых показатель женской занятости (из задания 1) находится в промежутке от 3 до 5
 	\end{itemize}
 \end{frame}
 
