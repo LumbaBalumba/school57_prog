@@ -1,0 +1,259 @@
+\documentclass{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage[T2A]{fontenc}
+\usepackage[russian]{babel}
+
+\usetheme{Madrid}
+\usecolortheme{default}
+
+\title{SQL: Работа с JOIN}
+\subtitle{Основные виды соединений и примеры использования}
+\author{Лазар В. И., Козлова Е. Р.}
+\date{\today}
+
+\begin{document}
+
+% Титульный слайд
+\begin{frame}
+	\titlepage
+\end{frame}
+
+% Слайд: План занятия
+\begin{frame}{План занятия}
+	\tableofcontents
+\end{frame}
+
+% Секция 1: Введение в JOIN
+\section{Что такое JOIN}
+\begin{frame}{Общее представление о JOIN}
+	\begin{itemize}
+		\item \textbf{JOIN} — это операция в SQL, позволяющая объединять строки из двух (или более) таблиц
+		      на основе связанного столбца между ними.
+		\item Используется для того, чтобы в одном запросе получать данные сразу из нескольких таблиц.
+		\item Наиболее распространены следующие виды \textbf{JOIN}:
+		      \begin{itemize}
+			      \item \textbf{INNER JOIN}
+			      \item \textbf{LEFT (OUTER) JOIN}
+			      \item \textbf{RIGHT (OUTER) JOIN}
+			      \item \textbf{FULL (OUTER) JOIN}
+			      \item \textbf{CROSS JOIN}
+		      \end{itemize}
+		\item Другие специфические варианты (например, \texttt{NATURAL JOIN}) реже применяются и не всегда поддерживаются.
+	\end{itemize}
+\end{frame}
+
+% Секция 2: INNER JOIN
+\section{INNER JOIN}
+\begin{frame}[fragile]{INNER JOIN — соединение по совпадающим значениям}
+	\begin{itemize}
+		\item \textbf{INNER JOIN} возвращает только те строки, у которых совпадают значения в связанных столбцах обеих таблиц.
+		\item Если хотя бы в одной таблице нет соответствующей записи,
+		      то такая строка не попадёт в результирующий набор.
+	\end{itemize}
+	\begin{block}{Синтаксис}
+		\begin{verbatim}
+SELECT t1.col, t2.col
+FROM table1 AS t1
+INNER JOIN table2 AS t2
+    ON t1.key = t2.key;
+\end{verbatim}
+	\end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Пример использования INNER JOIN}
+	\textbf{Предположим, у нас есть две таблицы:}
+	\begin{itemize}
+		\item \texttt{orders (order\_id, customer\_id, amount)}
+		\item \texttt{customers (customer\_id, customer\_name)}
+	\end{itemize}
+
+	\textbf{Запрос:}
+	\begin{verbatim}
+SELECT c.customer_name, o.amount
+FROM customers AS c
+INNER JOIN orders AS o
+    ON c.customer_id = o.customer_id
+WHERE o.amount > 1000;
+\end{verbatim}
+
+	\textbf{Описание:}
+	\begin{itemize}
+		\item Выбирает имя покупателя и сумму заказа.
+		\item Возвращает только те строки, где \texttt{customer\_id} есть и в
+		      \texttt{customers}, и в \texttt{orders}, и сумма заказа > 1000.
+	\end{itemize}
+\end{frame}
+
+% Секция 3: LEFT JOIN
+\section{LEFT JOIN}
+\begin{frame}[fragile]{LEFT (OUTER) JOIN — все строки из левой таблицы}
+	\begin{itemize}
+		\item \textbf{LEFT JOIN} возвращает все строки из левой таблицы (указанной после \texttt{FROM}),
+		      даже если в правой таблице нет соответствующих значений.
+		\item Для строк, у которых нет совпадающей записи в правой таблице, значения в столбцах правой таблицы будут \textbf{NULL}.
+	\end{itemize}
+	\begin{block}{Синтаксис}
+		\begin{verbatim}
+SELECT t1.col, t2.col
+FROM table1 AS t1
+LEFT JOIN table2 AS t2
+    ON t1.key = t2.key;
+\end{verbatim}
+	\end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Пример использования LEFT JOIN}
+	\textbf{Те же таблицы:}
+	\begin{itemize}
+		\item \texttt{orders (order\_id, customer\_id, amount)}
+		\item \texttt{customers (customer\_id, customer\_name)}
+	\end{itemize}
+
+	\textbf{Запрос:}
+	\begin{verbatim}
+SELECT c.customer_name, o.amount
+FROM customers AS c
+LEFT JOIN orders AS o
+    ON c.customer_id = o.customer_id;
+\end{verbatim}
+
+	\textbf{Описание:}
+	\begin{itemize}
+		\item Возвращает все строки из \texttt{customers}, даже если в \texttt{orders} для данного
+		      \texttt{customer\_id} нет записей.
+		\item Если покупатель не сделал заказ, \texttt{amount} будет \textbf{NULL}.
+	\end{itemize}
+\end{frame}
+
+% Секция 4: RIGHT JOIN
+\section{RIGHT JOIN}
+\begin{frame}[fragile]{RIGHT (OUTER) JOIN — все строки из правой таблицы}
+	\begin{itemize}
+		\item \textbf{RIGHT JOIN} возвращает все строки из правой таблицы,
+		      даже если в левой таблице нет соответствующих значений.
+		\item Аналогично \textbf{LEFT JOIN}, но фокус — на правой таблице.
+		\item Не все СУБД (например, SQLite) поддерживают \texttt{RIGHT JOIN} напрямую.
+	\end{itemize}
+	\begin{block}{Синтаксис}
+		\begin{verbatim}
+SELECT t1.col, t2.col
+FROM table1 AS t1
+RIGHT JOIN table2 AS t2
+    ON t1.key = t2.key;
+\end{verbatim}
+	\end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Пример использования RIGHT JOIN}
+	\textbf{Если \texttt{RIGHT JOIN} поддерживается:}
+	\begin{verbatim}
+SELECT o.order_id, c.customer_name
+FROM customers AS c
+RIGHT JOIN orders AS o
+    ON c.customer_id = o.customer_id;
+\end{verbatim}
+
+	\textbf{Описание:}
+	\begin{itemize}
+		\item Возвращает все строки из \texttt{orders}.
+		\item Если в \texttt{customers} нет совпадающей записи по \texttt{customer\_id},
+		      то \texttt{customer\_name} будет \textbf{NULL}.
+	\end{itemize}
+\end{frame}
+
+% Секция 5: FULL JOIN и CROSS JOIN
+\section{FULL JOIN и CROSS JOIN}
+\begin{frame}[fragile]{FULL (OUTER) JOIN — все строки из обеих таблиц}
+	\begin{itemize}
+		\item \textbf{FULL JOIN} возвращает все строки из обеих таблиц,
+		      заполняя \textbf{NULL} там, где нет совпадающих значений.
+		\item Объединяет в себе идею \textbf{LEFT JOIN} и \textbf{RIGHT JOIN}.
+		\item Тоже не поддерживается во всех СУБД (в частности, в SQLite нет \textbf{FULL JOIN}).
+	\end{itemize}
+	\begin{block}{Синтаксис}
+		\begin{verbatim}
+SELECT t1.col, t2.col
+FROM table1 AS t1
+FULL JOIN table2 AS t2
+    ON t1.key = t2.key;
+\end{verbatim}
+	\end{block}
+\end{frame}
+
+\begin{frame}[fragile]{CROSS JOIN — декартово произведение}
+	\begin{itemize}
+		\item \textbf{CROSS JOIN} возвращает декартово произведение строк:
+		      каждая строка левой таблицы «скрещивается» с каждой строкой правой.
+		\item При \textbf{CROSS JOIN} обычно не указывается условие \texttt{ON}, либо оно игнорируется.
+	\end{itemize}
+	\begin{block}{Синтаксис}
+		\begin{verbatim}
+SELECT t1.col, t2.col
+FROM table1 AS t1
+CROSS JOIN table2 AS t2;
+\end{verbatim}
+	\end{block}
+\end{frame}
+
+% Секция 6: Сравнение вложенных запросов и JOIN
+\section{Сравнение с вложенными запросами}
+\begin{frame}{Когда лучше использовать JOIN, а когда — вложенные запросы?}
+	\begin{itemize}
+		\item \textbf{JOIN} часто предпочтительнее по производительности при больших объёмах данных.
+		\item \textbf{Вложенные запросы} удобны, когда нужно получить промежуточные вычисления
+		      (например, выборку уникальных значений или агрегацию), и логичнее оформить это «внутри» основного запроса.
+		\item При \textbf{JOIN} можно в одном запросе отобразить данные из нескольких таблиц
+		      в виде одной «плоской» структуры.
+		\item СУБД обычно эффективно оптимизируют \textbf{JOIN}, особенно если правильно настроены индексы.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Пример: JOIN vs Subquery}
+	\textbf{Пусть нужно вывести имена клиентов, сделавших заказы дороже 1000.}
+
+	\textbf{Через вложенный запрос:}
+	\begin{verbatim}
+SELECT customer_name
+FROM customers
+WHERE customer_id IN (
+    SELECT customer_id
+    FROM orders
+    WHERE amount > 1000
+);
+\end{verbatim}
+
+	\textbf{Через JOIN:}
+	\begin{verbatim}
+SELECT DISTINCT c.customer_name
+FROM customers AS c
+JOIN orders AS o
+    ON c.customer_id = o.customer_id
+WHERE o.amount > 1000;
+\end{verbatim}
+\end{frame}
+
+% Секция 7: Задания
+\section{Задания}
+
+% --- Задания по factbook.db ---
+
+\begin{frame}[fragile]{Задания для factbook.db}
+	\begin{itemize}
+		\item Напишите запрос, возвращающий для каждой страны следующие значения: название страны, население страны, городское население страны и процентное соотношение городского населения к общему
+		\item Напишите запрос, возвращающий каждой страны название, количество городов в этой стране, столицу этой страны, население столицы и процент населения столицы от общего населения
+	\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Задания для chinook.db}
+	\begin{itemize}
+		\item Напишите запрос, получающие следующие колонки из объединения таблиц: invoice\_id=1, track\_id, track\_name, media\_type\_name, quantity и unit\_price
+		\item Напишите запрос, получающий информацию о названии альбома, имени испонителя и общем количестве проданных копий альбома
+		\item Для каждого клиента выведите суммарное количество средств на его счетах. Полученные данные отсортируйте в порядке убывания средств на счетах.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Дополнительное задание}
+	Попробуйте решить задания из предыдущего задания с помощью \texttt{JOIN} вместо вложенных запросов.
+\end{frame}
+
+\end{document}
