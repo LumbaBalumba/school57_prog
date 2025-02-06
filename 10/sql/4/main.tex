@@ -1,0 +1,264 @@
+\documentclass{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage[T2A]{fontenc}
+\usepackage[russian]{babel}
+
+\usetheme{Madrid}
+\usecolortheme{default}
+
+\title{VIEW и оконные функции}
+\subtitle{Создание представлений и обзор возможностей оконных функций}
+\author{Лазар В. И., Козлова Е. Р.}
+\date{\today}
+
+\begin{document}
+
+% ----------------------------------------------------
+% Титульный слайд
+% ----------------------------------------------------
+\begin{frame}
+	\titlepage
+\end{frame}
+
+% ----------------------------------------------------
+% Слайд: План занятия
+% ----------------------------------------------------
+\begin{frame}{План занятия}
+	\tableofcontents
+\end{frame}
+
+% ----------------------------------------------------
+% Секция 1: VIEW
+% ----------------------------------------------------
+\section{Что такое VIEW и зачем он нужен}
+
+\begin{frame}{Зачем нужны VIEW (представления)?}
+	\begin{itemize}
+		\item \textbf{VIEW} (представление) — виртуальная таблица, определяемая запросом \texttt{SELECT}.
+		\item Хранит не данные сами по себе, а только определение запроса.
+		\item Упрощает логику: можно «сохранить» сложный запрос как \texttt{VIEW} и затем работать с ним как с обычной таблицей.
+		\item Повышает безопасность: даёт доступ к нужной части данных без прямого доступа к исходным таблицам.
+		\item Удобно использовать для отображения объединённых или вычисляемых данных.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Синтаксис создания VIEW}
+	\begin{block}{Синтаксис (SQLite)}
+		\begin{verbatim}
+CREATE [OR REPLACE] VIEW view_name AS
+SELECT ...
+FROM ...
+[WHERE ...];
+\end{verbatim}
+	\end{block}
+	\begin{itemize}
+		\item \texttt{CREATE VIEW view\_name AS <SELECT>} — создаёт новое представление.
+		\item \texttt{OR REPLACE} — перезаписывает существующее представление.
+		\item В SQLite представления нельзя напрямую \texttt{UPDATE}, т. к. у них нет своих данных.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Пример: Создание VIEW}
+	\textbf{Допустим, у нас есть таблицы \texttt{employees} и \texttt{departments}.}
+	\begin{verbatim}
+CREATE VIEW v_emp_dept AS
+SELECT e.emp_id,
+       e.emp_name,
+       e.salary,
+       d.dept_name
+FROM employees AS e
+JOIN departments AS d
+    ON e.dept_id = d.dept_id
+WHERE e.salary > 50000;
+\end{verbatim}
+
+	\textbf{Описание:}
+	\begin{itemize}
+		\item \texttt{v\_emp\_dept} покажет сотрудников с окладом > 50\,000 и названия их отделов.
+		\item Можно теперь делать \texttt{SELECT} из \texttt{v\_emp\_dept} как из таблицы.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Использование VIEW}
+	\textbf{Как работать с созданным VIEW?}
+	\begin{verbatim}
+SELECT *
+FROM v_emp_dept
+WHERE dept_name = 'Отдел разработки';
+\end{verbatim}
+
+	\begin{itemize}
+		\item Выполняется так, как будто \texttt{v\_emp\_dept} — это обычная таблица.
+		\item По сути, СУБД «подставляет» исходный запрос при выполнении.
+	\end{itemize}
+
+	\textbf{Удаление VIEW:}
+	\begin{verbatim}
+DROP VIEW v_emp_dept;
+\end{verbatim}
+	\begin{itemize}
+		\item Удаляет представление (не затрагивая исходные таблицы).
+	\end{itemize}
+\end{frame}
+
+% ----------------------------------------------------
+% Секция 2: Оконные функции
+% ----------------------------------------------------
+\section{Оконные функции в SQLite}
+
+\begin{frame}{Что такое оконные функции?}
+	\begin{itemize}
+		\item \textbf{Оконные функции} (\textit{window functions}) — специальные функции SQL,
+		      позволяющие выполнять вычисления по «окну» строк (\texttt{OVER}).
+		\item В отличие от обычных агрегатных функций, не свёртывают строки в одну, а «распределяют» вычисленное значение по каждой строке.
+		\item Примеры: \texttt{ROW\_NUMBER()}, \texttt{RANK()}, \texttt{LAG()}, \texttt{LEAD()}, агрегаты с \texttt{OVER}.
+		\item В SQLite доступно, начиная с версии 3.25.0 (сентябрь 2018).
+	\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Общий синтаксис оконных функций}
+	\begin{verbatim}
+<function>() OVER (
+    [PARTITION BY column_list]
+    [ORDER BY column_list]
+)
+\end{verbatim}
+
+	\textbf{Пример:}
+	\begin{verbatim}
+SELECT
+    employee_id,
+    salary,
+    AVG(salary) OVER (
+        PARTITION BY dept_id
+    ) AS avg_salary_in_dept
+FROM employees;
+\end{verbatim}
+
+	\begin{itemize}
+		\item \textbf{PARTITION BY} — группирует строки в «окна» (например, по отделам).
+		\item \textbf{ORDER BY} — порядок, важный для функций ранжирования
+	\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Пример 1: \texttt{ROW\_NUMBER()}}
+	\begin{verbatim}
+SELECT
+    emp_name,
+    salary,
+    ROW_NUMBER() OVER (ORDER BY salary DESC) AS row_num
+FROM employees;
+\end{verbatim}
+	\begin{itemize}
+		\item \texttt{ROW\_NUMBER} даёт порядковый номер каждой строки в рамках указанного окна.
+		\item В данном случае окно — вся таблица, упорядоченная по убыванию зарплаты.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Пример 2: \texttt{RANK()} и \texttt{DENSE\_RANK()}}
+	\begin{verbatim}
+SELECT
+    emp_name,
+    salary,
+    RANK() OVER (ORDER BY salary DESC) AS salary_rank,
+    DENSE_RANK() OVER (ORDER BY salary DESC) AS dense_rank
+FROM employees;
+\end{verbatim}
+
+	\textbf{Описание:}
+	\begin{itemize}
+		\item \texttt{RANK()} — при совпадении зарплат пропускает следующий ранг (1,1,3,...).
+		\item \texttt{DENSE\_RANK()} — идёт подряд без пропусков (1,1,2,...).
+	\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Пример 3: Агрегат с \texttt{PARTITION BY}}
+	\textbf{Задача: для каждого сотрудника вывести его зарплату и среднюю зарплату в отделе.}
+	\begin{verbatim}
+SELECT
+    e.emp_id,
+    e.emp_name,
+    e.dept_id,
+    e.salary,
+    AVG(e.salary) OVER (
+        PARTITION BY e.dept_id
+    ) AS avg_salary_in_dept
+FROM employees e;
+\end{verbatim}
+
+	\begin{itemize}
+		\item Каждая строка сохраняется, но получает дополнительную инфу о средней зарплате по своему отделу.
+	\end{itemize}
+\end{frame}
+
+% ----------------------------------------------------
+% Секция 3: Задания
+% ----------------------------------------------------
+\section{Задания}
+
+\begin{frame}{Задания (1--4)}
+	\begin{enumerate}
+		\item \textbf{Создание VIEW для объединения таблиц:}
+		      Создайте \texttt{VIEW} (например, \texttt{v\_employee\_info}) на основе \texttt{employees} и \texttt{departments},
+		      выводя \texttt{emp\_name}, \texttt{salary}, \texttt{dept\_name}. Отберите только сотрудников, у которых зарплата выше среднего в их отделе
+		      (подумайте, можно ли использовать оконную функцию прямо в \texttt{CREATE VIEW}).
+
+		\item \textbf{Добавление вычисляемого поля в VIEW:}
+		      Создайте представление, где помимо основных полей будет столбец «годовая зарплата» = \texttt{salary * 12}.
+		      Покажите пример \texttt{SELECT} из этого представления.
+
+		\item \textbf{VIEW с условием:}
+		      Создайте представление \texttt{v\_high\_salary}, отображающее только тех сотрудников, у кого \texttt{salary} > 100000.
+		      Затем сделайте \texttt{SELECT} из \texttt{v\_high\_salary} и убедитесь, что вывелись только «высокие» зарплаты.
+
+		\item \textbf{Удаление VIEW:}
+		      Удалите одно из созданных вами представлений. Убедитесь, что исходные таблицы при этом не пострадали.
+	\end{enumerate}
+\end{frame}
+
+\begin{frame}{Задания (5--8)}
+	\begin{enumerate}
+		\setcounter{enumi}{4}
+		\item \textbf{Применение оконной функции \texttt{ROW\_NUMBER()}:}
+		      Напишите запрос, который присваивает каждой записи о сотруднике уникальный порядковый номер (по убыванию зарплаты) с помощью \texttt{ROW\_NUMBER()}.
+
+		\item \textbf{\texttt{RANK()} и одинаковая зарплата:}
+		      Покажите, как \texttt{RANK()} присваивает места сотрудникам, если у нескольких человек зарплата совпадает.
+		      Для наглядности используйте \texttt{SELECT emp\_name, salary, RANK() OVER (ORDER BY salary DESC)}.
+
+		\item \textbf{Агрегация с \texttt{PARTITION BY}}:
+		      Для таблицы \texttt{employees} найдите, какому отделу принадлежит каждый сотрудник и какова средняя зарплата в этом отделе.
+		      (Используйте \texttt{AVG(salary) OVER (PARTITION BY dept\_id)}.)
+
+		\item \textbf{\texttt{DENSE\_RANK()} по отделам:}
+		      Сгруппируйте сотрудников по отделам (\texttt{PARTITION BY dept\_id}) и упорядочьте внутри отдела по зарплате по убыванию.
+		      Используйте \texttt{DENSE\_RANK()} — так каждый сотрудник увидит свой «ранг зарплаты» в своём отделе.
+	\end{enumerate}
+\end{frame}
+
+\begin{frame}{Задания (9--11)}
+	\begin{enumerate}
+		\setcounter{enumi}{8}
+		\item \textbf{Создание VIEW с оконной функцией:}
+		      Создайте \texttt{VIEW}, в котором каждая строка содержит \texttt{emp\_id}, \texttt{emp\_name},
+		      и позицию сотрудника (\texttt{ROW\_NUMBER()}) в общем рейтинге по зарплате.
+		      Убедитесь, что при \texttt{SELECT * FROM <view\_name>} таблица корректно отображает ранги.
+
+		\item \textbf{Сравнение зарплаты с предыдущей строкой (\texttt{LAG}):}
+		      Напишите запрос, который для каждого сотрудника показывает его \texttt{salary} и «предыдущую» зарплату (\texttt{LAG(salary) OVER (ORDER BY salary)}) — так вы сможете сравнить.
+
+		\item \textbf{Дополнительный вызов: обновление представления?}
+		      Попробуйте выполнить \texttt{UPDATE} или \texttt{INSERT} через созданное \texttt{VIEW} и проверьте, даёт ли это результат или ошибку в SQLite.
+	\end{enumerate}
+\end{frame}
+
+\begin{frame}{Задание 12}
+	\begin{enumerate}
+		\setcounter{enumi}{11}
+		\item \textbf{Сложный запрос + VIEW:}
+		      Попробуйте объединить данные из нескольких таблиц (например, \texttt{employees}, \texttt{departments}, \texttt{projects} — если есть)
+		      в один запрос с оконной функцией, а затем сделайте из него \texttt{VIEW}, чтобы упростить повторный доступ к этим вычислениям.
+	\end{enumerate}
+\end{frame}
+
+\end{document}
