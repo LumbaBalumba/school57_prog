@@ -1,0 +1,6 @@
+CREATE TABLE IF NOT EXISTS task (
+    id INTEGER PRIMARY KEY,
+    name VARCHAR(1024) NOT NULL UNIQUE,
+    description TEXT,
+    completed BOOLEAN DEFAULT FALSE
+);
