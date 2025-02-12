@@ -1,0 +1,221 @@
+\documentclass{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage[T2A]{fontenc}
+\usepackage[russian]{babel}
+
+\usetheme{Madrid}
+\usecolortheme{default}
+
+\title{Использование SQLite в Python}
+\subtitle{Подключение и основные операции}
+\author{Лазар В. И., Козлова Е. Р.}
+\date{\today}
+
+\begin{document}
+
+% ----------------------------------------------------
+% Титульный слайд
+% ----------------------------------------------------
+\begin{frame}
+	\titlepage
+\end{frame}
+
+% ----------------------------------------------------
+% Слайд: План занятия
+% ----------------------------------------------------
+\begin{frame}{План занятия}
+	\tableofcontents
+\end{frame}
+
+% ----------------------------------------------------
+% Секция 2: Подготовка окружения
+% ----------------------------------------------------
+\section{Подготовка окружения}
+
+\begin{frame}{Установка и импорт}
+	\begin{itemize}
+		\item \textbf{Встроенный модуль \texttt{sqlite3}} (начиная с Python 2.5).
+		\item Никаких дополнительных библиотек не требуется.
+		\item Импорт:
+		      \begin{block}{Пример}
+			      \texttt{import sqlite3}
+		      \end{block}
+		\item Для проверки версии SQLite используйте:
+		      \begin{block}{Пример}
+			      \texttt{sqlite3.sqlite\_version}
+		      \end{block}
+	\end{itemize}
+\end{frame}
+
+% ----------------------------------------------------
+% Секция 3: Подключение и базовые операции
+% ----------------------------------------------------
+\section{Подключение и базовые операции}
+
+\begin{frame}[fragile]{Создание и подключение к базе данных}
+	\begin{block}{Пример кода на Python}
+		\begin{verbatim}
+import sqlite3
+
+# Создаём или открываем существующий файл базы данных
+conn = sqlite3.connect('example.db')
+
+# Создаём курсор для выполнения SQL-запросов
+cursor = conn.cursor()
+
+# В конце работы не забудьте закрыть соединение
+conn.close()
+\end{verbatim}
+	\end{block}
+
+	\begin{itemize}
+		\item Если файла \texttt{example.db} ещё нет, он будет создан автоматически.
+		\item \texttt{conn} — объект соединения, \texttt{cursor} — объект для работы с SQL.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Создание таблицы}
+	\begin{block}{Пример SQL в Python}
+		\begin{verbatim}
+import sqlite3
+conn = sqlite3.connect('example.db')
+cursor = conn.cursor()
+cursor.execute(''' # Создаём таблицу
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL,
+        age INTEGER,
+        city TEXT
+    )
+''')
+conn.commit()  # фиксируем изменения
+conn.close()
+\end{verbatim}
+	\end{block}
+
+	\begin{itemize}
+		\item \texttt{commit()} — фиксирует (сохраняет) изменения в базе данных.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Добавление данных}
+	\begin{block}{Пример SQL в Python}
+		\begin{verbatim}
+import sqlite3
+conn = sqlite3.connect('example.db')
+cursor = conn.cursor()
+# Пример параметризированного запроса
+cursor.execute('''
+    INSERT INTO users (username, age, city)
+    VALUES (?, ?, ?)
+''', ('Иван', 25, 'Москва'))
+conn.commit()
+conn.close()
+\end{verbatim}
+	\end{block}
+
+	\begin{itemize}
+		\item Используйте \textbf{плейсхолдеры ( \texttt{?} )} и кортеж значений для защиты от SQL-инъекций.
+		\item Можно выполнять \texttt{execute} несколько раз для разных данных или воспользоваться \texttt{executemany}.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Выборка данных}
+	\begin{block}{Пример SQL в Python}
+		\begin{verbatim}
+import sqlite3
+conn = sqlite3.connect('example.db')
+cursor = conn.cursor()
+# Выполняем SELECT-запрос
+cursor.execute('SELECT id, username, age, city FROM users')
+# Получаем все результаты
+rows = cursor.fetchall()
+for row in rows:
+    print(row)
+conn.close()
+\end{verbatim}
+	\end{block}
+
+	\begin{itemize}
+		\item \texttt{fetchall()} — возвращает список кортежей с результатами.
+		\item \texttt{fetchone()} — возвращает одну строку, \texttt{fetchmany(n)} — \texttt{n} строк.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Обновление и удаление данных}
+	\begin{block}{Обновление}
+		\begin{verbatim}
+cursor.execute('''
+    UPDATE users
+    SET age = ?
+    WHERE username = ?
+''', (26, 'Иван'))
+\end{verbatim}
+	\end{block}
+
+	\begin{block}{Удаление}
+		\begin{verbatim}
+cursor.execute('''
+    DELETE FROM users
+    WHERE username = ?
+''', ('Иван',))
+\end{verbatim}
+	\end{block}
+
+	\begin{itemize}
+		\item Не забудьте \texttt{commit()} после \texttt{UPDATE} или \texttt{DELETE}.
+	\end{itemize}
+\end{frame}
+
+% ----------------------------------------------------
+% Секция 4: Практические советы
+% ----------------------------------------------------
+\section{Практические советы}
+
+\begin{frame}[fragile]{Работа с контекстными менеджерами}
+	\begin{block}{Пример}
+		\begin{verbatim}
+import sqlite3
+
+with sqlite3.connect('example.db') as conn:
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM users')
+    rows = cursor.fetchall()
+    print(rows)
+\end{verbatim}
+	\end{block}
+
+	\begin{itemize}
+		\item С \texttt{with} не нужно явно вызывать \texttt{close()}.
+		\item По выходу из блока \texttt{with} изменения автоматически \texttt{commit()}-ятся,
+		      если не произошло ошибки, иначе — \texttt{rollback()}.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Организация кода в проекте}
+	\begin{itemize}
+		\item Вся логика работы с БД выносится в отдельный пакет (обычно его называют \texttt{db} или \texttt{models})
+		\item Для каждой сущности создаётся класс, который называется моделью этой сущности. Все операции над классом преобразуются в соответствующий SQL-код
+		\item Обычно в каждом методе создаётся отдельный курсор для упрощения взаимодействия, но бывают случаи, когда курсор создаётся извне и передаётся в методы (dependency injection)
+	\end{itemize}
+\end{frame}
+
+% ----------------------------------------------------
+% Секция 5: Итоговое задание
+% ----------------------------------------------------
+\section{Проектное задание}
+
+\begin{frame}{Задание: Мини-приложение для хранения данных}
+	Вы создаёте приложение для библиотеки.
+	\newline
+	\textbf{Требования:}
+	\begin{enumerate}
+		\item Хранение информации о различных книгах в библиотеке (название, автор, год выпуска, издание, номер шкафа, номер полки).
+		\item Хранение информации о посетителях библиотеки (имя, фамилия, отчество, номер читательского билета, адрес).
+		\item Хранение информации о том, какой пользователь какие книги читает в данный момент.
+		\item Возможность внесения информации об актуальных изменениях (появление новой книги в библиотеке, регистрация нового пользователя, выдача книги пользователю, получения книги от пользователя, поиск книги по различным параметрам, и т. д.)
+		\item Консольный (или графический) интерфейс для взаимодействия с программой.
+	\end{enumerate}
+\end{frame}
+
+\end{document}
