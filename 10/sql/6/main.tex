@@ -1,0 +1,367 @@
+\documentclass{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage[T2A]{fontenc}
+\usepackage[russian]{babel}
+
+\usetheme{Madrid}
+\usecolortheme{default}
+
+\title{Введение в SQLAlchemy}
+\subtitle{Основы ORM в Python}
+\author{Лазар В. И., Козлова Е. Р.}
+\date{\today}
+
+\begin{document}
+
+% ----------------------------------------------------
+% Титульный слайд
+% ----------------------------------------------------
+\begin{frame}
+	\titlepage
+\end{frame}
+
+% ----------------------------------------------------
+% Слайд: План занятия
+% ----------------------------------------------------
+\begin{frame}{План занятия}
+	\tableofcontents
+\end{frame}
+
+% ----------------------------------------------------
+% Секция 1: Введение
+% ----------------------------------------------------
+\section{Что такое SQLAlchemy?}
+
+\begin{frame}{Обзор SQLAlchemy}
+	\begin{itemize}
+		\item \textbf{SQLAlchemy} — одна из самых популярных ORM-библиотек для Python.
+		\item Позволяет работать с разными СУБД (SQLite, PostgreSQL, MySQL и др.) единым способом.
+		\item Делит функционал на \textit{Core} (работа с SQL на более низком уровне) и \textit{ORM} (объектно-реляционное отображение).
+		\item Упрощает создание и сопровождение проектов: меньше «ручного» SQL, больше объектного подхода.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Зачем нужна ORM?}
+	\begin{itemize}
+		\item \textbf{Отделение бизнес-логики} от конкретных SQL-запросов.
+		\item \textbf{Кросс-база}: без изменения кода можно подключить другую СУБД.
+		\item \textbf{Удобство}: вместо таблиц и строк — привычные классы и объекты.
+		\item \textbf{Безопасность}: автоматическая экранизация параметров, меньше риска SQL-инъекций.
+	\end{itemize}
+\end{frame}
+
+% ----------------------------------------------------
+% Секция 2: Установка и настройка
+% ----------------------------------------------------
+\section{Установка и настройка}
+
+\begin{frame}[fragile]{Установка}
+	\begin{block}{Используйте pip}
+		\begin{verbatim}
+pip install sqlalchemy
+\end{verbatim}
+	\end{block}
+
+	\begin{itemize}
+		\item Для работы c SQLite хватит \texttt{sqlite3} из стандартной библиотеки.
+		\item При необходимости подключать драйверы для других СУБД (например, \texttt{psycopg2} для PostgreSQL).
+	\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Базовая конфигурация}
+	\begin{block}{Пример создания \texttt{engine} и \texttt{session}}
+		\begin{verbatim}
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+# Пример для SQLite
+engine = create_engine('sqlite:///example.db')
+
+Session = sessionmaker(bind=engine)
+session = Session()
+\end{verbatim}
+	\end{block}
+
+	\begin{itemize}
+		\item \textbf{Engine} — «двигатель» для подключения к базе.
+		\item \textbf{Session} — объект для взаимодействия с БД (объект транзакции).
+	\end{itemize}
+\end{frame}
+
+% ----------------------------------------------------
+% Секция 3: Создание моделей (ORM)
+% ----------------------------------------------------
+\section{Создание моделей}
+
+\begin{frame}[fragile]{Декларативная модель}
+	\begin{block}{Пример Python-класса}
+		\begin{verbatim}
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Column, Integer, String
+
+Base = declarative_base()
+
+class User(Base):
+    __tablename__ = 'users'
+
+    id = Column(Integer, primary_key=True)
+    username = Column(String, nullable=False)
+    city = Column(String)
+\end{verbatim}
+	\end{block}
+
+	\begin{itemize}
+		\item \texttt{Base} — базовый класс для всех моделей.
+		\item \textbf{Колонки} описываются как атрибуты класса.
+		\item \texttt{\_\_tablename\_\_} — имя таблицы в БД.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Создание таблиц по моделям}
+	\begin{block}{Пример}
+		\begin{verbatim}
+Base.metadata.create_all(engine)
+\end{verbatim}
+	\end{block}
+
+	\begin{itemize}
+		\item \texttt{create\_all} проверяет, какие таблицы уже существуют, и создаёт отсутствующие.
+		\item Полезно при первом запуске или при добавлении новых моделей.
+	\end{itemize}
+\end{frame}
+
+% ----------------------------------------------------
+% Секция 4: Добавление и выборка данных
+% ----------------------------------------------------
+\section{Работа с данными}
+
+\begin{frame}[fragile]{Добавление данных}
+	\begin{block}{Пример Python-кода}
+		\begin{verbatim}
+new_user = User(username='Ivan', city='Moscow')
+session.add(new_user)
+session.commit()
+\end{verbatim}
+	\end{block}
+
+	\begin{itemize}
+		\item \texttt{session.add} — подготавливает объект к вставке.
+		\item \texttt{commit()} — фиксирует транзакцию (CREATE или UPDATE).
+	\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Выборка (\texttt{SELECT})}
+	\begin{block}{Пример}
+		\begin{verbatim}
+users = session.query(User).all()
+for user in users:
+    print(user.username, user.city)
+\end{verbatim}
+	\end{block}
+
+	\begin{itemize}
+		\item \texttt{query(User).all()} вернёт список всех объектов из таблицы \texttt{users}.
+		\item Можно применять \texttt{filter}, \texttt{order\_by}, \texttt{limit} и прочие SQL-конструкции.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Обновление данных}
+	\begin{block}{Пример}
+		\begin{verbatim}
+user = session.query(User).filter_by(username='Ivan').first()
+user.city = 'Saint Petersburg'
+session.commit()
+\end{verbatim}
+	\end{block}
+
+	\begin{itemize}
+		\item При изменении атрибута объекта и вызове \texttt{commit()} SQLAlchemy сформирует и выполнит \texttt{UPDATE}-запрос.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Удаление данных}
+	\begin{block}{Пример}
+		\begin{verbatim}
+user_to_delete = session.query(User).filter_by(username='Ivan').first()
+session.delete(user_to_delete)
+session.commit()
+\end{verbatim}
+	\end{block}
+
+	\begin{itemize}
+		\item \texttt{session.delete} готовит объект к удалению.
+		\item \texttt{commit()} выполняет \texttt{DELETE}-запрос.
+	\end{itemize}
+\end{frame}
+
+% ----------------------------------------------------
+% Секция 5: Связи (Relationships)
+% ----------------------------------------------------
+\section{Связи между моделями}
+
+\begin{frame}[fragile]{Отношение \texttt{One-to-Many}}
+	\begin{verbatim}
+from sqlalchemy import ForeignKey
+from sqlalchemy.orm import relationship
+
+class Department(Base):
+    __tablename__ = 'departments'
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+
+class Employee(Base):
+    __tablename__ = 'employees'
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    department_id = Column(
+                Integer, ForeignKey('departments.id'))
+    department = relationship(
+                'Department', backref='employees')
+\end{verbatim}
+\end{frame}
+
+\begin{frame}[fragile]{Отношение \texttt{One-to-Many}}
+	\begin{itemize}
+		\item \texttt{ForeignKey} в \texttt{Employee} указывает на \texttt{departments.id}.
+		\item \texttt{relationship} позволяет обращаться к \texttt{Employee.department}.
+		\item \texttt{backref='employees'} даёт доступ к списку сотрудников из \texttt{Department}.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Отношение One-to-One}
+	\begin{itemize}
+		\item В SQLAlchemy нет специального ключевого слова «One-to-One».
+		\item Реализуется как \texttt{One-to-Many} с дополнительным уникальным ограничением или через \texttt{uselist=False}.
+	\end{itemize}
+
+	\begin{block}{Пример c \texttt{uselist=False}}
+		\begin{verbatim}
+class Person(Base):
+    __tablename__ = 'persons'
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+
+class Passport(Base):
+    __tablename__ = 'passports'
+    id = Column(Integer, primary_key=True)
+    person_id = Column(Integer,
+        ForeignKey('persons.id'), unique=True)
+    person = relationship('Person', backref='passport',
+                                    uselist=False)
+\end{verbatim}
+	\end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Отношение One-to-One}
+	\begin{itemize}
+		\item \texttt{unique=True} указывает, что \texttt{person\_id} уникален —
+		      не может указывать на несколько записей (строк).
+		\item \texttt{uselist=False} даёт понять, что ожидается единственный объект.
+	\end{itemize}
+\end{frame}
+
+% ------------------- MANY TO MANY -------------------
+\begin{frame}[fragile]{Отношение Many-to-Many (через ассоциативную таблицу)}
+	\begin{block}{Пример}
+		\begin{verbatim}
+association_table = Table('association', Base.metadata,
+    Column('student_id', Integer, ForeignKey('students.id')),
+    Column('course_id', Integer, ForeignKey('courses.id'))
+)
+
+\end{verbatim}
+	\end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Отношение Many-to-Many (через ассоциативную таблицу)}
+	\begin{block}{Пример}
+		\begin{verbatim}
+class Student(Base):
+    __tablename__ = 'students'
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    courses = relationship('Course',
+                secondary=association_table,
+                back_populates='students')
+class Course(Base):
+    __tablename__ = 'courses'
+    id = Column(Integer, primary_key=True)
+    title = Column(String)
+    students = relationship('Student',
+                secondary=association_table,
+                back_populates='courses')
+\end{verbatim}
+	\end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Отношение Many-to-Many (через ассоциативную таблицу)}
+	\begin{itemize}
+		\item \texttt{association\_table} — вспомогательная таблица с полями \texttt{student\_id} и \texttt{course\_id}.
+		\item \texttt{relationship(..., secondary=...)} связывает через таблицу.
+		\item \texttt{back\_populates} указывает на связное поле в другой модели.
+	\end{itemize}
+\end{frame}
+% ----------------------------------------------------
+% Секция 6: Задания
+% ----------------------------------------------------
+\begin{frame}{Общая идея проекта}
+	\textbf{Система управления проектами и задачами (консольное приложение)}:
+	\begin{itemize}
+		\item Написать на Python (используя SQLAlchemy) мини-систему для работы с
+		      \texttt{Project}, \texttt{User}, \texttt{Profile}, \texttt{Task}.
+		\item Обязательно задействовать:
+		      \begin{itemize}
+			      \item Все основные операции с БД (CRUD: Create, Read, Update, Delete).
+			      \item Различные типы связей: One-to-One, One-to-Many, Many-to-Many.
+		      \end{itemize}
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Требования к проекту (1/2)}
+	\begin{itemize}
+		\item \textbf{Модели (таблицы) и связи:}
+		      \begin{enumerate}
+			      \item \textbf{User (пользователь)}
+			            \begin{itemize}
+				            \item \texttt{id}, \texttt{username}, \texttt{email}
+				            \item Связь One-to-One с \texttt{Profile}
+				            \item Связь Many-to-Many с \texttt{Project}
+			            \end{itemize}
+			      \item \textbf{Profile (профиль пользователя)}
+			            \begin{itemize}
+				            \item \texttt{id}, \texttt{bio}, \texttt{phone}, \texttt{user\_id} (уникальный ForeignKey)
+			            \end{itemize}
+			      \item \textbf{Project (проект)}
+			            \begin{itemize}
+				            \item \texttt{id}, \texttt{title}, \texttt{description}
+				            \item Связь One-to-Many с \texttt{Task}
+				            \item Связь Many-to-Many с \texttt{User}
+			            \end{itemize}
+			      \item \textbf{Task (задача)}
+			            \begin{itemize}
+				            \item \texttt{id}, \texttt{title}, \texttt{status}, \texttt{project\_id} (ForeignKey)
+			            \end{itemize}
+		      \end{enumerate}
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Требования к проекту (2/2)}
+	\begin{itemize}
+		\item \textbf{CRUD-операции:}
+		      \begin{itemize}
+			      \item Создание новых записей (\texttt{User}, \texttt{Project}, \texttt{Task}, \texttt{Profile}).
+			      \item Чтение (просмотр) списков и деталей (вывести всех пользователей, задачи проекта и т. п.).
+			      \item Обновление (изменить \texttt{email} пользователя, статус задачи, описание проекта и т. д.).
+			      \item Удаление (убрать ненужного пользователя, проект или задачу).
+		      \end{itemize}
+		\item \textbf{Пример функционала}: «Добавить проект», «Добавить задачу», «Вывести пользователей»,
+		      «Назначить пользователя на проект» (Many-to-Many), «Добавить профиль к пользователю» (One-to-One).
+		\item \textbf{Демонстрация работы связей}:
+		      \begin{itemize}
+			      \item \texttt{user.profile}, \texttt{project.tasks}, \texttt{user.projects}
+			            и т. п. (в зависимости от настроенного \texttt{relationship}).
+		      \end{itemize}
+	\end{itemize}
+\end{frame}
+
+\end{document}
