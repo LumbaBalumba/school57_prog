@@ -1,0 +1,157 @@
+% !TEX program = pdflatex
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T2A]{fontenc}
+\usepackage[russian]{babel}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{enumitem, booktabs, longtable}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=blue}
+
+\title{TinyPy — Техническое задание (упрощённая формулировка)}
+\author{Школьный курс «Как работает интерпретатор»}
+\date{\today}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+% ------------------------------------------------
+\section{Что такое TinyPy}
+TinyPy — маленький учебный язык, похожий на сильно упрощённый Python. Он умеет:
+\begin{itemize}
+	\item считать числовые выражения;
+	\item хранить числа в переменных;
+	\item выполнять условия \texttt{if}/\texttt{else} и циклы \texttt{while};
+	\item выводить данные через \texttt{print}.
+\end{itemize}
+Финальный результат — программа на~Python, запускаемая так:
+\begin{verbatim}
+python -m tinypy              # интерактивный режим
+python -m tinypy prog.tny     # исполнить файл TinyPy
+\end{verbatim}
+
+% ------------------------------------------------
+\section{Структура проекта}
+\begin{verbatim}
+tinypy/
+ --- lexer.py        # превращает текст в токены
+ --- parser.py       # собирает токены в дерево (AST)
+ --- ast_nodes.py    # классы узлов AST
+ --- interpreter.py  # выполняет дерево
+ --- repl.py         # интерактивный >>-цикл
+ --- errors.py       # классы ошибок (Lexer-, Syntax-, Runtime-)
+
+tests/               # автотесты преподавателя
+\end{verbatim}
+
+% ------------------------------------------------
+\section{Токены, которые обязан узнавать лексер}
+\begin{longtable}{@{}llp{6cm}@{}}
+	\toprule
+	Категория            & Вид                                                                                                                         & Пример                          \\ \midrule
+	\endhead
+	Число                & цифры (можно с точкой)                                                                                                      & \texttt{12}, \texttt{3.14}      \\
+	Идентификатор        & буква/\_ + буквы/цифры/\_                                                                                                   & \texttt{x}, \texttt{total\_sum} \\
+	Ключевые слова       & \multicolumn{2}{l}{\texttt{let}, \texttt{if}, \texttt{else}, \texttt{while}, \texttt{true}, \texttt{false}, \texttt{print}}                                   \\
+	Односимвольные знаки & \multicolumn{2}{l}{\texttt{+\; -\; *\; /\; (\; )\; \{\; \}\; ;}}                                                                                              \\
+	Двухсимвольные знаки & \multicolumn{2}{l}{\texttt{==\; !=\; <\; <=\; >\; >=\; =}}                                                                                                    \\
+	Комментарии          & \# до конца строки                                                                                                          & \texttt{\# это комментарий}     \\ \bottomrule
+\end{longtable}
+Пробелы и табы игнорируются.
+
+% ------------------------------------------------
+\section{Синтаксис TinyPy}
+\subsection{Программа}
+Набор команд, разделённых переводом строки или символом \texttt{;}. Пустые строки разрешены.
+
+\subsection{Переменные}
+\begin{verbatim}
+let radius = 10
+let area   = 3.14 * radius * radius
+\end{verbatim}
+\begin{itemize}
+	\item Каждое объявление начинается со слова \texttt{let}.
+	\item Имя можно объявить только один раз внутри одного блока.
+\end{itemize}
+
+\subsection{Выражения}
+\begin{itemize}
+	\item Числа, имена переменных, \texttt{true}/\texttt{false}.
+	\item Операции (от старшего приоритета к младшему):
+	      \[ ** \;\;\; \rightarrow \;\;\; * / \;\;\; \rightarrow \;\;\; + - \;\;\; \rightarrow \;\;\; == != < <= > >= \]
+	\item Скобки \texttt{( … )} меняют порядок вычислений.
+\end{itemize}
+
+\subsection{Команда‑выражение}
+Если написать выражение отдельно, результат выводится автоматически:
+\begin{verbatim}
+1 + 2   # печатает 3
+\end{verbatim}
+
+\subsection{Функция \texttt{print}}
+\begin{verbatim}
+print(1 + 2)
+print(radius)
+\end{verbatim}
+
+\subsection{Условие}
+\begin{verbatim}
+if (x > 0) {
+    print(x)
+} else {
+    print(0)
+}
+\end{verbatim}
+
+\subsection{Цикл}
+\begin{verbatim}
+while (n > 0) {
+    print(n)
+    n = n - 1
+}
+\end{verbatim}
+
+\subsection{Блоки}
+Код внутри \texttt{\{ … \}} создаёт новый «вложенный» набор переменных.
+
+% ------------------------------------------------
+\section{Ошибки}
+\begin{tabular}{ll}
+	\toprule
+	Ситуация                                & Бросить исключение      \\ \midrule
+	Неизвестный символ                      & \texttt{LexerError}     \\
+	Неправильная последовательность токенов & \texttt{SyntaxError\_}  \\
+	Деление на 0, неизвестная переменная    & \texttt{RuntimeError\_} \\ \bottomrule
+\end{tabular}
+
+Сообщение ошибки должно содержать хотя бы номер строки.
+
+% ------------------------------------------------
+\section{Оценивание}
+\begin{tabular}{lr}
+	\toprule
+	Раздел                            & Баллы        \\ \midrule
+	Лексер (лекции 1–2)               & 25           \\
+	Парсер + AST (лекция 3)           & 25           \\
+	Интерпретатор (лекции 4–5)        & 40           \\
+	REPL + запуск из файла (лекция 6) & 10           \\
+	\textbf{Итого}                    & \textbf{100} \\ \bottomrule
+\end{tabular}
+
+Большую часть баллов выставляют автотесты; остальное — проверка кода преподавателем.
+
+% ------------------------------------------------
+\section{Инструменты}
+\begin{itemize}
+	\item Python 3.11, библиотека \texttt{PLY}.
+	\item Тесты — \texttt{pytest}, стиль — \texttt{flake8}, проверка опечаток — \texttt{codespell}.
+	\item GitHub Actions уже настроен: при каждом \texttt{push} запускаются тесты, линтер и spell‑check.
+\end{itemize}
+
+\section{Формат сдачи}
+Создаётся отдельная личная ветка в \href{https://github.com/LumbaBalumba/tinypy}{репозитории}. Все изменения производятся исключительно в своей ветке. Для сдачи определённого этапа создаётся Pull Request.
+
+\end{document}
