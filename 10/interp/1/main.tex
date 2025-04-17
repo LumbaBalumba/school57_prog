@@ -155,20 +155,11 @@
 	Реализовать минимальный лексер TinyPy:
 	\begin{enumerate}
 		\item Склонировать репозиторий, открыть tinypy/lexer.py.
-		\item Добавить правила для токенов: \texttt{NUMBER}, \texttt{IDENT}, \texttt{+ - * / ( )} и ключевого слова \texttt{let}.
+		\item Добавить правила для токенов: \texttt{NUMBER}, \texttt{IDENT}, \texttt{+ - * / ( )}, \texttt{=} и ключевого слова \texttt{let}.
 		\item Игнорировать пробелы и комментарии \texttt{\# ...}.
 		\item Обновлять \texttt{lineno} и вычислять колонку.
 		\item Запустить \texttt{pytest tests/test\_lexer\_basic.py} — 16 тестов должны пройти.
 	\end{enumerate}
-\end{frame}
-%------------------------------------------------
-
-\begin{frame}{Домашнее задание}
-	\begin{itemize}
-		\item Установить пакет \texttt{ply} и довести лексер до поддержки токенов \texttt{\{ \} ; =}.
-		\item Внимательно прочитать \emph{Tinypy Technical Spec}.
-		\item \small Доп. литература: Р. Нистром «Crafting Interpreters», главы 1–2.
-	\end{itemize}
 \end{frame}
 %------------------------------------------------
 
