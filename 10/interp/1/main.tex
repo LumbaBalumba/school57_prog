@@ -1,0 +1,175 @@
+% !TEX program = pdflatex
+\documentclass[aspectratio=169]{beamer}
+%------------------------------------------------
+% Packages
+%------------------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T2A]{fontenc}
+\usepackage[russian]{babel}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{graphicx}
+\usepackage{verbatim}
+\usetheme{Madrid}
+%------------------------------------------------
+% Listings style
+%------------------------------------------------
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\footnotesize,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{green!50!black}\itshape,
+    stringstyle=\color{red},
+    numbers=left,
+    numberstyle=\tiny,
+    breaklines=true,
+    frame=single,
+    captionpos=b,
+    inputencoding=utf8
+}
+
+
+%------------------------------------------------
+% Metadata
+%------------------------------------------------
+\title[Лекция 1]{Анализ кода\\ \small Лекция 1 — RegEx и лексический анализ}
+\author{Лазар В. И.}
+\institute[10 класс]{Школьный курс программирования}
+\date{\today}
+%------------------------------------------------
+\begin{document}
+
+%------------------------------------------------
+\begin{frame}
+	\titlepage
+\end{frame}
+%------------------------------------------------
+\begin{frame}{Почему мы изучаем интерпретаторы?}
+	\begin{itemize}
+		\item Python, JavaScript, Lua — все интерпретируемые.
+		\item Быстрый REPL‑цикл: пишем $\rightarrow$ сразу видим результат.
+		\item Даже компиляторы внутри содержат интерпретирующие фазы (AST walk).
+	\end{itemize}
+	\pause
+\end{frame}
+%------------------------------------------------
+
+\begin{frame}{Карта курса}
+	\begin{enumerate}
+		\item Введение, RegEx, лексический анализ
+		\item Лексер на \texttt{ply.lex}
+		\item Парсер на \texttt{ply.yacc} и AST
+		\item Выполнение AST, окружения
+		\item Условия, циклы, встроенные функции
+		\item Итоговый REPL, ошибки, перспективы
+	\end{enumerate}
+\end{frame}
+%------------------------------------------------
+
+\begin{frame}{Мини‑проект TinyPy}
+	\begin{itemize}
+		\item Итог — интерпретатор языка с переменными, условиями и циклами.
+		\item Оценивание по ТЗ (до 100 б.).
+	\end{itemize}
+\end{frame}
+%------------------------------------------------
+
+\begin{frame}{Регулярные выражения: экспресс‑повторение}
+	\begin{columns}[t]
+		\column{0.48\textwidth}
+		\textbf{Метасимволы}
+		\begin{tabular}{ll}
+			\texttt{.}         & любой символ                \\
+			\texttt{*}         & 0 и более                   \\
+			\texttt{+}         & 1 и более                   \\
+			\texttt{?}         & 0 или 1                     \\
+			\texttt{[abc]}     & a \textbar{} b \textbar{} c \\
+			\texttt{\^{}[abc]} & не a,b,c                    \\
+			\texttt{|}         & альтернатива                \\
+			\texttt{()}        & группа                      \\
+		\end{tabular}
+		\column{0.48\textwidth}
+		\textbf{Квантификаторы}
+		\begin{tabular}{ll}
+			\texttt{\{n\}}   & ровно n   \\
+			\texttt{\{n,\}}  & $\ge n$   \\
+			\texttt{\{,m\}}  & $\le m$   \\
+			\texttt{\{n,m\}} & от n до m \\
+		\end{tabular}
+	\end{columns}
+\end{frame}
+%------------------------------------------------
+
+\begin{frame}[fragile]{От RegEx к токенам}
+	\begin{itemize}
+		\item Лексер сканирует поток символов и группирует их в токены.
+		\item Каждый токен описывается регулярным выражением.
+	\end{itemize}
+	\pause
+	\begin{verbatim}
+        rules = [
+            (r"\d+",   "NUMBER"),
+            (r"[A-Za-z_][A-Za-z0-9_]*", "IDENT"),
+            (r"\+", "PLUS"), (r"-", "MINUS"),
+            (r"\*", "STAR"), (r"/", "SLASH"),
+            (r"\(", "LPAREN"), (r"\)", "RPAREN"),
+        ]
+    \end{verbatim}
+\end{frame}
+%------------------------------------------------
+
+\begin{frame}[fragile]{Пример токенизации строки}
+	Исходная строка: \texttt{1 + 2 * (3 - 4)} \newline
+	Токенизированная строка:
+	\begin{verbatim}
+        [NUMBER(1), PLUS, NUMBER(2), STAR, LPAREN,
+        NUMBER(3), MINUS, NUMBER(4), RPAREN]
+    \end{verbatim}
+	\begin{itemize}
+		\item Пробелы и комментарии игнорируются.
+		\item Позиции токена: строка, колонка — нужны для сообщений об ошибках.
+	\end{itemize}
+\end{frame}
+%------------------------------------------------
+
+\begin{frame}{Почему PLY?}
+	\begin{itemize}
+		\item Чистый Python, проще ставить и отлаживать
+		\item Поддерживает LALR(1)‑грамматики, достаточно для TinyPy.
+		\item Правила задаются обычными функциями.
+	\end{itemize}
+\end{frame}
+%------------------------------------------------
+
+\begin{frame}{Pipeline интерпретатора}
+	\centering
+	% Загрузите файл pipeline.pdf в проект Overleaf или замените изображение.
+	% \includegraphics[width=0.85\linewidth]{pipeline.pdf}
+	\begin{small}
+		Текст $\rightarrow$ \textbf{Лексер (PLY)} $\rightarrow$ токены $\rightarrow$ \textbf{Парсер (PLY)} $\rightarrow$ AST $\rightarrow$ \textbf{Выполнение}.
+	\end{small}
+\end{frame}
+%------------------------------------------------
+
+\begin{frame}{Практическое задание к занятию 1}
+	Реализовать минимальный лексер TinyPy:
+	\begin{enumerate}
+		\item Склонировать репозиторий, открыть tinypy/lexer.py.
+		\item Добавить правила для токенов: \texttt{NUMBER}, \texttt{IDENT}, \texttt{+ - * / ( )} и ключевого слова \texttt{let}.
+		\item Игнорировать пробелы и комментарии \texttt{\# ...}.
+		\item Обновлять \texttt{lineno} и вычислять колонку.
+		\item Запустить \texttt{pytest tests/test\_lexer\_basic.py} — 16 тестов должны пройти.
+	\end{enumerate}
+\end{frame}
+%------------------------------------------------
+
+\begin{frame}{Домашнее задание}
+	\begin{itemize}
+		\item Установить пакет \texttt{ply} и довести лексер до поддержки токенов \texttt{\{ \} ; =}.
+		\item Внимательно прочитать \emph{Tinypy Technical Spec}.
+		\item \small Доп. литература: Р. Нистром «Crafting Interpreters», главы 1–2.
+	\end{itemize}
+\end{frame}
+%------------------------------------------------
+
+\end{document}
