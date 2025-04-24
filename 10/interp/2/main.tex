@@ -1,0 +1,202 @@
+% !TEX program = pdflatex
+\documentclass[aspectratio=169]{beamer}
+
+%------------------------------------------------
+% Packages
+%------------------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T2A]{fontenc}
+\usepackage[russian]{babel}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{tikz}
+\usetheme{Madrid}
+
+%------------------------------------------------
+% Listings
+%------------------------------------------------
+\lstset{
+  language=Python,
+  basicstyle=\ttfamily\scriptsize,
+  keywordstyle=\color{blue},
+  commentstyle=\itshape\color{gray},
+  stringstyle=\color{red},
+  showstringspaces=false,
+  frame=single,
+  breaklines=true
+}
+
+%------------------------------------------------
+% Metadata
+%------------------------------------------------
+\title[Лекция 2]{От токенов к абстрактному синтаксическому дереву\\ \small Лекция 2 — парсер и AST в PLY}
+\author{Лазар В. И.}
+\date{\today}
+
+%------------------------------------------------
+\begin{document}
+
+%------------------------------------------------
+\begin{frame}
+	\titlepage
+\end{frame}
+
+%------------------------------------------------
+\begin{frame}{Где мы сейчас?}
+	\begin{enumerate}
+		\item Лекция 1 — лексер: получили упорядоченный список токенов.
+		\item \textbf{Лекция 2 — строим AST и учимся его выполнять.}
+		\item Дальше — расширяем язык и пишем REPL.
+	\end{enumerate}
+\end{frame}
+
+%------------------------------------------------
+\begin{frame}{Что такое AST?}
+	\begin{block}{Определение}
+		\textbf{Абстрактное синтаксическое дерево (AST)} — структурное представление программы, в котором опущены лишние скобки и пунктуация, а каждый узел описывает семантическую сущность (число, переменную, операцию…).
+	\end{block}
+
+	Почему не оставить «сырые» токены?
+	\begin{itemize}
+		\item Деревом проще анализировать и исполнять.
+		\item Исчезают неоднозначности приоритетов.
+		\item Можно легко добавлять новые фишки (<<гуляем>> по дереву).
+	\end{itemize}
+\end{frame}
+
+%------------------------------------------------
+\begin{frame}[fragile]{Пример 1: выражение $1 + 2 * 3$}
+	\vspace{-0.8em}
+	\begin{columns}[c]
+		\column{0.55\textwidth}
+		\begin{tikzpicture}[level distance=1cm,sibling distance=2.5cm, every node/.style={font=\small}]
+			\node{\textbf{+}}
+			child{ node{\textbf{1}} }
+			child{ node{\textbf{*}}
+					child{ node{\textbf{2}} }
+					child{ node{\textbf{3}} }};
+		\end{tikzpicture}
+		\column{0.45\textwidth}
+		В Python‑коде это будет:
+		\begin{lstlisting}
+BinOp("+",
+      Number(1),
+      BinOp("*", Number(2), Number(3)))
+\end{lstlisting}
+	\end{columns}
+\end{frame}
+
+%------------------------------------------------
+\begin{frame}[fragile]{Пример 2: условие}
+	\begin{lstlisting}[language=Python]
+If(
+  cond=BinOp("<", Identifier("x"), Number(0)),
+  then_block=[Print(Identifier("x"))],
+  else_block=[Print(Number(0))]
+)
+\end{lstlisting}
+
+	\textbf{Важно:} дерево отражает логику, а не текстовую форму.
+\end{frame}
+
+%------------------------------------------------
+\begin{frame}[fragile]{Как PLY помогает строить AST}
+	\begin{itemize}
+		\item Лексер (\lstinline|lexer.py|) уже выдаёт токены.
+		\item Теперь пишем правила \texttt{ply.yacc}: «что после чего идёт».
+		\item Каждое правило — функция \lstinline|p_...|, у которой \lstinline|p[0]| возвращает узел.
+	\end{itemize}
+	\pause
+	\begin{lstlisting}
+from tinypy.ast_nodes import Number, BinOp
+
+def p_expr_binop(p):
+    """expr : expr PLUS expr
+            | expr MINUS expr"""
+    p[0] = BinOp(p[2], p[1], p[3])
+\end{lstlisting}
+\end{frame}
+
+%------------------------------------------------
+\begin{frame}[fragile]{Файл \texttt{ast\_nodes.py}}
+	\begin{lstlisting}
+from dataclasses import dataclass
+class Node: pass
+@dataclass
+class Number(Node):
+    value: float
+@dataclass
+class Identifier(Node):
+    name: str
+@dataclass
+class BinOp(Node):
+    op: str
+    left: Node
+    right: Node
+\end{lstlisting}
+\end{frame}
+
+%------------------------------------------------
+\begin{frame}[fragile]{Приоритеты и ассоциативность}
+	В PLY они задаются таблицей:
+	\begin{lstlisting}
+precedence = (
+  ('left', 'PLUS', 'MINUS'),
+  ('left', 'STAR', 'SLASH'),
+  ('right', 'POWER'),   # **
+)
+\end{lstlisting}
+	Это избавляет от ручного разбора вложенных выражений.
+\end{frame}
+
+%------------------------------------------------
+\begin{frame}[fragile]{Отладка парсера}
+	\begin{itemize}
+		\item \lstinline|parser = yacc.yacc(debug=True)| создаёт файл \texttt{parsetab.py}.
+		\item Команда \lstinline|parser.parse(src, lexer=lexer)| возвращает корневой узел.
+		\item Можно распечатать дерево функцией \lstinline|print(ast)| — dataclass делает это красиво.
+	\end{itemize}
+\end{frame}
+
+%------------------------------------------------
+\begin{frame}[fragile]{Быстрое исполнение AST}
+	Идея: рекурсивно обойти дерево.
+	\begin{lstlisting}
+def eval_node(node, env):
+    if isinstance(node, Number):
+        return node.value
+    if isinstance(node, Identifier):
+        return env[node.name]
+    if isinstance(node, BinOp):
+        a = eval_node(node.left, env)
+        b = eval_node(node.right, env)
+        return a + b if node.op == '+' else a - b
+\end{lstlisting}
+	`env` — обычный словарь переменных.
+\end{frame}
+
+%------------------------------------------------
+\begin{frame}[fragile]{Мини‑пример «всё вместе»}
+	\begin{lstlisting}[language=Python]
+src = "let x = 2 * 3; x + 1"
+lexer.input(src)
+ast = parser.parse(lexer=lexer)  # AST
+env = {}
+for stmt in ast:
+    print(eval_node(stmt, env))
+\end{lstlisting}
+\end{frame}
+
+%------------------------------------------------
+\begin{frame}[fragile]{Практика к семинару 2}
+	\begin{enumerate}
+		\item Завести файл \texttt{parser.py} по шаблону.
+		\item Реализовать правила для: числа, идентификатора, \texttt{+ - * /}, скобок.
+		\item Добавить таблицу приоритетов.
+		\item Написать функцию, печатающую полученный AST.
+		\item Запустить тесты \texttt{pytest tests/test\_parser\_basic.py} (появятся в репо).
+	\end{enumerate}
+\end{frame}
+
+%------------------------------------------------
+\end{document}
