@@ -288,42 +288,7 @@
 
 % --- 13. Пере/недообучение ---
 \begin{frame}{Недообучение и переобучение: шумные данные и три модели}
-	\begin{tikzpicture}
-		\begin{axis}[
-				width=0.58\linewidth,height=7.2cm,
-				xmin=-5,xmax=7,ymin=-10,ymax=120,
-				axis lines=left, xlabel={$x$}, ylabel={$y$},
-				legend style={draw=none,at={(0.02,0.98)},anchor=north west, font=\scriptsize},
-				tick label style={font=\small},
-				restrict y to domain=-10:120,
-				unbounded coords=discard,
-				filter discard warning=false
-			]
-			% --- 20 шумных точек: y = x^2 + N(0, 3^2) ---
-			\addplot[only marks,mark=*,mark size=1.7pt] coordinates{
-					(-5.0000,25.9142) (-4.3684,15.9632) (-3.7368,16.2153) (-3.1053,1.4409) (-2.4737,1.5000)
-					(-1.8421,2.2000) (-1.2105,4.2000) (-0.5789,-0.5700) (0.0526,-0.0476) (0.6842,-2.0910)
-					(1.3158,4.3695) (1.9474,2.1000) (2.5789,9.8500) (3.2105,10.9400) (3.8421,13.8000)
-					(4.4737,18.9000) (5.1053,27.1700) (5.7368,30.0347) (6.3684,43.1921) (7.0000,48.8502)
-				};
-			\addlegendentry{данные (20 т.)}
-
-			% --- Линейная МНК-модель (a*x + b) ---
-			\addplot[domain=-5:7,samples=240,thick] { 2.120576225*x + (12.0437854) };
-			\addlegendentry{линейная регрессия}
-
-			% --- Квадратичная МНК-модель (a2*x^2 + a1*x + a0) ---
-			\addplot[domain=-5:7,samples=240,thick,dashed] { ((0.9959017971)*x + (0.1287726306))*x + (-0.1691155875) };
-			\addlegendentry{квадратичная регрессия}
-
-			% --- Полином степени 21: демонстрация высокой гибкости/осцилляций ---
-			% (Выбранная конструкция даёт заметные отличия от квадратичной на шумных данных.)
-			\addplot[domain=-5:7,samples=480,thick,densely dotted] {
-				x^2 + 0.0005*(x-1)^21 - 0.02*(x-1)^7 + 0.3*(x-1)^3 - 0.2*(x-1)
-			};
-			\addlegendentry{полином степени 21}
-		\end{axis}
-	\end{tikzpicture}
+	\includegraphics[width=0.6\textwidth]{overfitting.png}
 \end{frame}
 
 % --- 14. Предобработка и признаки ---
