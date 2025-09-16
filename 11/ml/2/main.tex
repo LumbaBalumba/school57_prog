@@ -1,0 +1,192 @@
+% !TEX program = pdflatex
+\documentclass[11pt,aspectratio=169]{beamer}
+
+% ====== Пакеты ======
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[russian]{babel}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc,shapes.geometric}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+
+% ====== Оформление ======
+\usetheme{Madrid}
+\setbeamertemplate{navigation symbols}{}
+\definecolor{Accent}{RGB}{34,139,230}
+\setbeamercolor{structure}{fg=Accent}
+
+% ====== Заголовки ======
+\title{Линейная регрессия, L2 (Ridge) и L1 (Lasso)}
+\author{Лазар В. И., Козлова Е. Р.}
+\date{\today}
+
+% ====== Общие стили для рисунков ======
+\tikzset{>={Latex[length=2mm]}}
+
+\begin{document}
+
+% --- Титульный слайд ---
+\begin{frame}
+	\titlepage
+\end{frame}
+
+
+% --- 2. Постановка линейной регрессии ---
+\begin{frame}{Постановка: линейная регрессия}
+	\small
+	Дано: выборка $\{(\mathbf x_i, y_i)\}_{i=1}^n$, где $\mathbf x_i\in\mathbb R^d$, $y_i\in\mathbb R$.
+	\textbf{Модель:}
+	\begin{equation*}
+		\hat y = \mathbf w^\top \mathbf x + b = \sum_{i=0}^{d} x_i w_i + b
+	\end{equation*}
+	\textbf{Критерий (MSE):}
+	\begin{equation*}
+		\mathrm{MSE}(\mathbf w,b)=\frac{1}{n}\sum_{i=1}^n\bigl(y_i- \hat{y}_i \bigr)^2
+	\end{equation*}
+	Цель: найти $\mathbf w,b$, минимизирующие MSE и хорошо обобщающие на новых данных.
+\end{frame}
+
+% --- 3. Интуиция MSE: точки, прямая и остатки ---
+\begin{frame}{Интуиция MSE: «лучше всех приближает точки»}
+	\begin{columns}
+		\column{0.58\textwidth}
+		\begin{tikzpicture}
+			\begin{axis}[
+					width=\linewidth,height=6.1cm,
+					xmin=0,xmax=10,ymin=0,ymax=12,
+					axis lines=left, xlabel={Признак $x$}, ylabel={Цель $y$},
+					ticks=none
+				]
+				% Точки данных (зафиксированные)
+				\addplot[only marks,mark=*] coordinates{(1,2.3)(2,3.7)(3,5.2)(4,6.2)(5,6.9)(6,8.1)(7,9.2)(8,9.5)(9,10.6)};
+				% Линия регрессии
+				\addplot[domain=0:10,samples=200,thick] {0.95*x + 1.3};
+				% Остатки для трёх точек
+				\addplot[dashed] coordinates{(3,5.2) (3,4.15)};
+				\addplot[dashed] coordinates{(6,8.1) (6,6.0)};
+				\addplot[dashed] coordinates{(8,9.5) (8,8.9)};
+			\end{axis}
+		\end{tikzpicture}
+		\column{0.42\textwidth}
+		\small
+		\textbf{Остаток} $r_i = y_i-\hat y_i$ — вертикальное отклонение точки от прямой.
+		MSE усредняет квадраты остатков: большие промахи штрафуются сильнее.
+		Линия «балансирует» точки, уменьшая суммарную квадратичную ошибку.
+	\end{columns}
+\end{frame}
+
+% --- 6. L2 (Ridge): идея и формула ---
+\begin{frame}{L2-регуляризация (Ridge): «сжимает» веса}
+	\small
+	Добавляем штраф на крупные веса:
+	\[
+		J_{\text{ridge}}(\mathbf w,b)=\operatorname{MSE}(\mathbf w,b) + \lambda\,\lVert\mathbf w\rVert_2^2 = \operatorname{MSE}(\mathbf w,b) + \lambda\,\sum_{i=0}^{d} w_{i}^2.
+	\]
+	Эффект: коэффициенты «сжимаются» к нулю, модель стабильнее к шуму и мультиколлинеарности. Обычно требуется \textbf{стандартизовать} признаки.
+\end{frame}
+
+% --- 7. Геометрия Ridge: эллипсы + круг ---
+\begin{frame}{Ridge: геометрическая картина}
+	\begin{columns}
+		\column{0.56\textwidth}
+		\begin{tikzpicture}[scale=0.95]
+			% Оси w1,w2
+			\draw[->] (-2.4,0) -- (2.6,0) node[right]{$w_1$};
+			\draw[->] (0,-2.0) -- (0,2.4) node[above]{$w_2$};
+			% Эллипсы уровня MSE
+			\draw[Accent] (0,0) ellipse (2 and 1.2);
+			\draw[Accent] (0,0) ellipse (1.4 and 0.8);
+			\draw[Accent] (0,0) ellipse (0.9 and 0.5);
+			% Круговой constraint L2
+			\draw[thick] (0,0) circle (1.0);
+			% Точка касания
+			\fill (0.7,0.71*0.5) circle (1.2pt);
+			\node[anchor=west] at (0.72,0.36) {\tiny решение};
+		\end{tikzpicture}
+		\column{0.44\textwidth}
+		\small
+		Минимизируем MSE при ограничении $\lVert\mathbf w\rVert_2\le R$.
+		Касание эллипса уровня MSE окружности даёт решение: веса \emph{умеренные} по длине.
+	\end{columns}
+\end{frame}
+
+% --- 8. L1 (Lasso): идея и формула ---
+\begin{frame}{L1-регуляризация (Lasso): разреженность}
+	\small
+	Добавляем штраф на сумму модулей весов:
+	\[
+		J_{\text{lasso}}(\mathbf w,b)=\operatorname{MSE}(\mathbf w,b) + \lambda\,\lVert\mathbf w\rVert_1 = \operatorname{MSE} + \lambda\sum_i |w_i|.
+	\]
+	Эффект: часть коэффициентов становится ровно нулём (\textbf{разреженность}). Это помогает отбирать важные признаки.
+\end{frame}
+
+% --- 9. Геометрия Lasso: эллипсы + ромб ---
+\begin{frame}{Lasso: геометрическая картина}
+	\begin{columns}
+		\column{0.56\textwidth}
+		\begin{tikzpicture}[scale=0.95]
+			% Оси w1,w2
+			\draw[->] (-2.4,0) -- (2.6,0) node[right]{$w_1$};
+			\draw[->] (0,-2.0) -- (0,2.4) node[above]{$w_2$};
+			% Эллипсы уровня MSE
+			\draw[Accent] (0,0) ellipse (2 and 1.2);
+			\draw[Accent] (0,0) ellipse (1.4 and 0.8);
+			\draw[Accent] (0,0) ellipse (0.9 and 0.5);
+			% Ромб L1
+			\draw[thick] (0,1.1) -- (1.1,0) -- (0,-1.1) -- (-1.1,0) -- cycle;
+			% Точка касания в вершине (сparsity)
+			\fill (1.1,0) circle (1.2pt);
+			\node[anchor=west] at (1.12,0) {\tiny $w_2=0$};
+		\end{tikzpicture}
+		\column{0.44\textwidth}
+		\small
+		Из-за «углов» ромба решение часто попадает в вершину: некоторые $w_j$ становятся ровно нулём — это и есть разреженность.
+	\end{columns}
+\end{frame}
+
+% --- 10. Как меняются коэффициенты при росте \lambda ---
+\begin{frame}{Как влияет $\lambda$ на коэффициенты}
+	\begin{tikzpicture}
+		\begin{axis}[
+				width=0.92\linewidth,height=6cm,
+				xmin=0,xmax=10,ymin=0,ymax=1.1,
+				axis lines=left, xlabel={$\lambda$}, ylabel={$|w_j|$ (норм.)},
+				legend style={draw=none,at={(0.98,0.95)},anchor=north east, font=\scriptsize},
+				tick label style={font=\small}
+			]
+			% «Ridge-подобные» гладкие траектории
+			\addplot[domain=0:10,samples=100] {exp(-0.18*x)}; \addlegendentry{$w_1$}
+			\addplot[domain=0:10,samples=100] {0.8*exp(-0.35*x)}; \addlegendentry{$w_2$}
+			% «Lasso-подобные» обнуления
+			\addplot[domain=0:10,samples=100] {max(0,1-0.25*x)}; \addlegendentry{$w_3$}
+			\addplot[domain=0:10,samples=100] {max(0,0.9-0.5*x)}; \addlegendentry{$w_4$}
+		\end{axis}
+	\end{tikzpicture}
+	\vspace{2pt}
+	\footnotesize Ridge плавно «сжимает» все веса; Lasso может занулять некоторые при умеренных $\lambda$.
+\end{frame}
+
+% --- 11. Сравнение Ridge vs Lasso (когда что) ---
+\begin{frame}{Ridge vs Lasso: когда что лучше}
+	\small
+	\begin{itemize}
+		\item \textbf{Ridge} хорош, когда много слабых признаков и важно стабилизировать веса, нет жёсткой необходимости в отборе признаков.
+		\item \textbf{Lasso} подходит, когда ожидаем, что среди признаков есть немногие важные: он делает модель разреженной (удобно для интерпретации).
+		\item Можно комбинировать: \textbf{Elastic Net} $= \lambda_1\lVert w\rVert_1 + \lambda_2\lVert w\rVert_2^2$.
+	\end{itemize}
+\end{frame}
+
+% --- 12. Как выбирать \lambda и что учитывать ---
+\begin{frame}{Выбор $\lambda$ и практические моменты}
+	\small
+	\begin{itemize}
+		\item Делите данные на train/validation/test; используйте кросс-валидацию для подбора $\lambda$.
+		\item \textbf{Стандартизируйте признаки} перед регуляризацией: иначе штрафы несопоставимы.
+		\item Проверяйте пере/недообучение по кривым валидации.
+		\item Сохраняйте простоту: начинайте с Ridge, пробуйте Lasso, сравнивайте по валидации.
+	\end{itemize}
+\end{frame}
+
+\end{document}
