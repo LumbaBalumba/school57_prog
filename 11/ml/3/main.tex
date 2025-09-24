@@ -1,0 +1,201 @@
+% !TEX program = pdflatex
+\documentclass[11pt,aspectratio=169]{beamer}
+
+% ====== Пакеты ======
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[russian]{babel}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage{hyperref}
+
+% ====== Оформление ======
+\usetheme{Madrid}
+\setbeamertemplate{navigation symbols}{}
+\definecolor{Accent}{RGB}{34,139,230}
+\setbeamercolor{structure}{fg=Accent}
+
+% ====== Заголовки ======
+\title{Логистическая регрессия}
+\author{Лазар В. И., Козлова Е. Р.}
+\date{\today}
+
+% ====== Общие стили ======
+\tikzset{>={Latex[length=2mm]}}
+
+\begin{document}
+
+% --- ТИТУЛ ---
+\begin{frame}
+	\titlepage
+\end{frame}
+
+% --- 1. План ---
+
+
+% --- 2. Бинарная классификация: постановка ---
+\begin{frame}{Бинарная классификация: постановка}
+	\small
+	Дано: точки $(\mathbf x_i, y_i)$, где $y_i\in\{0,1\}$. Предсказываем вероятность $p(y=1\mid\mathbf x)\in[0,1]$, решение по порогу (обычно $0{,}5$).
+
+	\vspace{2mm}
+	\begin{tikzpicture}
+		\begin{axis}[
+				width=0.7\linewidth,height=5.6cm,
+				xmin=0,xmax=6,ymin=0,ymax=6,
+				axis lines=left, ticks=none, xlabel={$x_1$}, ylabel={$x_2$}
+			]
+			% Класс 0 (кружки) — ниже линии y = x - 0.5
+			\addplot[only marks,mark=o] coordinates{(1.5,0.1)(1.8,0.3)(2.3,0.8)(2.5,1.1)(2.9,1.2)(3.1,1.4)};
+			% Класс 1 (кресты) — выше линии y = x - 0.5
+			\addplot[only marks,mark=x] coordinates{(2.2,2.9)(2.8,3.6)(3.1,3.9)(3.5,4.4)(4.0,4.8)(4.6,5.2)};
+			% Линейная граница, чётко разделяющая классы
+			\addplot[domain=0:6,thick] {x - 0.5};
+			\node at (axis cs:5.2,4.7) {\scriptsize $\mathbf w^\top\mathbf x+b=0$};
+		\end{axis}
+	\end{tikzpicture}
+\end{frame}
+
+% --- 3. Почему не просто «линейная регрессия» для классов? ---
+\begin{frame}{Почему не подойдёт обычная линейная регрессия?}
+	\small
+	\begin{itemize}
+		\item Линейная регрессия выдаёт любые числа (\(\mathbb R\)), а нам нужна вероятность в \([0,1]\).
+		\item Квадратичная ошибка не «понимает» уверенность: за очень уверенную ошибку штраф почти как за небольшую.
+		\item Хотим модель, у которой \(\hat p=\Pr(y=1\mid\mathbf x)\), и потери, сильно наказывающие «уверенно неправые» ответы.
+	\end{itemize}
+\end{frame}
+
+% --- 4. Сигмоида ---
+\begin{frame}{Сигмоида: как из \(\mathbb R\) получить \([0,1]\)}
+	\small
+	Определение логистической функции (сигмоиды):
+	\begin{equation*}
+		\sigma(z) = \frac{1}{1 + e^{-z}}\, , \qquad z = \mathbf w^\top \mathbf x + b.
+	\end{equation*}
+	Тогда \(\hat p = \sigma(z)\in[0,1]\) — это и есть оценка вероятности класса «1».
+
+	\vspace{2mm}
+	\begin{tikzpicture}
+		\begin{axis}[
+				width=0.8\linewidth,height=5.2cm,
+				xmin=-6,xmax=6,ymin=-0.05,ymax=1.05,
+				axis lines=left, xlabel={$z$}, ylabel={$\sigma(z)$},
+				ticks=none
+			]
+			\addplot[domain=-6:6,samples=300,thick] {1/(1+exp(-x))};
+			\draw[dashed] (axis cs:0,0) -- (axis cs:0,1);
+			\draw[dashed] (axis cs:-6,0.5) -- (axis cs:6,0.5);
+		\end{axis}
+	\end{tikzpicture}
+\end{frame}
+
+% --- 5. Вероятностная модель (Бернулли) ---
+\begin{frame}{Вероятностная модель: Бернулли и правдоподобие}
+	\small
+	Для одного примера:
+	\begin{equation*}
+		p(y\mid \mathbf x) = \sigma(z)^y\, \bigl(1-\sigma(z)\bigr)^{(1-y)}, \quad y\in\{0,1\}.
+	\end{equation*}
+	Для всей выборки (независимость примеров):
+	\begin{equation*}
+		\mathcal L(\mathbf w,b) = \prod_{i=1}^n \sigma(z_i)^{y_i}\, \bigl(1-\sigma(z_i)\bigr)^{(1-y_i)}, \quad z_i=\mathbf w^\top\mathbf x_i+b.
+	\end{equation*}
+	\textbf{Учимся} максимизируя правдоподобие \(\mathcal L\) или (эквивалентно) лог-правдоподобие.
+\end{frame}
+
+% --- 6. От правдоподобия к функции потерь (шаг-за-шагом) ---
+\begin{frame}{Функция потерь логистической регрессии: шаг-за-шагом}
+	\small
+	1) Логарифмируем произведение (сумма логов):
+	\begin{equation*}
+		\log \mathcal L = \sum_{i=1}^n \Bigl[ y_i\,\log\sigma(z_i) + (1-y_i)\,\log\bigl(1-\sigma(z_i)\bigr) \Bigr].
+	\end{equation*}
+	2) Меняем знак (минимизация вместо максимизации):
+	\begin{equation*}
+		J(\mathbf w,b) = -\,\frac{1}{n}\sum_{i=1}^n \Bigl[ y_i\,\log\sigma(z_i) + (1-y_i)\,\log\bigl(1-\sigma(z_i)\bigr) \Bigr].
+	\end{equation*}
+	Это \textbf{кросс-энтропийная} потеря (log loss). Она \emph{сильно} штрафует уверенные ошибки.
+\end{frame}
+
+% --- 7. Эквивалентные формы потерь ---
+\begin{frame}{Эквивалентные формы log loss}
+	\small
+	Через \(y\in\{0,1\}\):
+	\begin{equation*}
+		\ell(y,z) = -\, y\,\log\sigma(z) - (1-y)\,\log\bigl(1-\sigma(z)\bigr).
+	\end{equation*}
+	Через \(y\in\{-1,+1\}\) и \(z=\mathbf w^\top\mathbf x + b\):
+	\begin{equation*}
+		\ell(y,z) = \log\bigl(1 + e^{-y\,z}\bigr).
+	\end{equation*}
+	Эти записи эквивалентны: выберите удобную для анализа/реализации.
+\end{frame}
+
+% --- 8. Как выглядит потеря: «уверенно неправ — больно» ---
+\begin{frame}{Интуиция потерь: как растёт штраф}
+	\small
+	Для \(y=1\): \(\ell= -\log\sigma(z)=\log(1+e^{-z})\). Для \(y=0\): \(\ell= -\log(1-\sigma(z))=\log(1+e^{z})\).
+
+	\vspace{2mm}
+	\begin{tikzpicture}
+		\begin{axis}[
+				width=0.9\linewidth,height=6.0cm,
+				xmin=-6,xmax=6,ymin=0,ymax=6,
+				axis lines=left, xlabel={$z$}, ylabel={потеря},
+				legend style={draw=none,at={(0.98,0.98)},anchor=north east, font=\scriptsize},
+				tick label style={font=\small}
+			]
+			\addplot[domain=-6:6,samples=300,thick] {ln(1+exp(-x))};
+			\addlegendentry{$y=1:~\log(1+e^{-z})$}
+			\addplot[domain=-6:6,samples=300,thick,dashed] {ln(1+exp(x))};
+			\addlegendentry{$y=0:~\log(1+e^{z})$}
+			% Вертикальная линия в 0
+			\draw[dashed] (axis cs:0,0) -- (axis cs:0,6);
+		\end{axis}
+	\end{tikzpicture}
+
+	\footnotesize Чем больше модель уверена и неправа (большой по модулю «не тот» знак \(z\)), тем больше штраф.
+\end{frame}
+
+% --- 9. Градиенты: как учиться ---
+
+
+% --- 10. Граница решения и вероятности ---
+\begin{frame}{Граница решения и порог}
+	\small
+	Решаем по порогу $\hat p=0{,}5$ (то есть $z=0$) — это \textbf{линейная} граница $\mathbf w^\top\mathbf x + b = 0$.
+
+	\vspace{2mm}
+	\begin{tikzpicture}
+		\begin{axis}[
+				width=0.7\linewidth,height=5.6cm,
+				xmin=0,xmax=6,ymin=0,ymax=6,
+				axis lines=left, ticks=none, xlabel={$x_1$}, ylabel={$x_2$}
+			]
+			% Класс 0 (кружки) — ниже линии y = x - 0.5
+			\addplot[only marks,mark=o] coordinates{(1.5,0.1)(1.8,0.3)(2.3,0.8)(2.5,1.1)(2.9,1.2)(3.1,1.4)};
+			% Класс 1 (кресты) — выше линии y = x - 0.5
+			\addplot[only marks,mark=x] coordinates{(2.2,2.9)(2.8,3.6)(3.1,3.9)(3.5,4.4)(4.0,4.8)(4.6,5.2)};
+			\addplot[domain=0:6,thick] {x - 0.5};
+			\node at (axis cs:5.2,4.7) {\scriptsize $\mathbf w^\top\mathbf x+b=0$};
+		\end{axis}
+	\end{tikzpicture}
+\end{frame}
+
+% --- 11. Немного о регуляризации ---
+\begin{frame}{Регуляризация (кратко)}
+	\small
+	Чтобы избежать переобучения и сделать веса стабильнее, добавляют штрафы:
+	\begin{equation*}
+		J_{\text{ridge}} = J + \lambda\,\lVert\mathbf w\rVert_2^2, \qquad
+		J_{\text{lasso}} = J + \lambda\,\lVert\mathbf w\rVert_1.
+	\end{equation*}
+	На практике \textbf{стандартизируйте} признаки и подбирайте \(\lambda\) по валидации.
+\end{frame}
+
+
+\end{document}
