@@ -242,4 +242,107 @@
 	\end{itemize}
 \end{frame}
 
+\section{Ансамбли деревьев}
+
+\begin{frame}{Почему ансамбли? Интуиция}
+	\begin{itemize}
+		\item \textbf{Один классификатор} может ошибаться по разным причинам (шум, малая выборка).
+		\item \textbf{Ансамбль} объединяет несколько моделей и чаще \textbf{снижает дисперсию} (колебания) и/или \textbf{смещение}.
+		\item Идея: «голосование» или «усреднение» многих деревьев даёт более устойчивый результат.
+		\item Три подхода: \textbf{бэггинг} (bagging), \textbf{бустинг} (boosting), \textbf{стэкинг} (stacking).
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Бэггинг (Bootstrap Aggregating)}
+	\begin{itemize}
+		\item Обучаем много деревьев на \textbf{бутстрэп-выборках} (случайные выборки с возвращением из обучающих данных).
+		\item \textbf{Классификация}: итог — \textbf{голосование большинством}. \quad
+		      \textbf{Регрессия}: итог — \textbf{среднее} предсказаний.
+		\item \textbf{Эффект:} сильное снижение \textbf{дисперсии} (меньше переобучения).
+		\item \textbf{OOB-оценка} (Out-of-Bag): объекты, не попавшие в бутстрэп, служат для быстрой оценки качества без отдельной валидации.
+		\item \textbf{Случайный лес} = бэггинг $+$ случайный поднабор признаков при поиске сплита (\texttt{max\_features}) $\Rightarrow$ деревья становятся менее похожими, ансамбль — сильнее.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Бэггинг: ключевые параметры}
+	\begin{itemize}
+		\item \texttt{n\_estimators}: число деревьев (обычно десятки/сотни).
+		\item \texttt{max\_depth}, \texttt{min\_samples\_leaf}: сложность базовых деревьев.
+		\item \texttt{max\_features}: доля/число признаков для сплита (случайный лес).
+		\item \texttt{bootstrap}: брать ли бутстрэп-выборки (обычно да).
+		\item \textbf{Плюсы:} простота, устойчивость, хорошая база по умолчанию.
+		\item \textbf{Минусы:} чуть меньшая интерпретируемость, скорость инференса ниже (много деревьев).
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Стэкинг (Stacking): «модель над моделями»}
+	\begin{itemize}
+		\item Обучаем \textbf{разные} базовые модели (например, дерево, kNN, логистическую регрессию).
+		\item Формируем \textbf{признаки второго уровня}: предсказания базовых моделей.
+		\item Обучаем \textbf{мета-модель} на этих признаках, чтобы \textbf{научиться комбинировать} их лучше простого среднего.
+		\item Чтобы избежать «подглядывания», используем \textbf{OOF-предсказания}: K-fold разбиение, на каждом фолде базовые модели предсказывают на валидации; склеиваем OOF-стек-признаки и учим мета-модель.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Схема стэкинга (OOF)}
+	\centering
+	\begin{tikzpicture}[
+			node distance=8mm and 12mm,
+			every node/.style={font=\small},
+			mdl/.style={draw, rounded corners, fill=blue!10, inner sep=3pt},
+			meta/.style={draw, rounded corners, fill=green!10, inner sep=3pt},
+			io/.style={draw, rounded corners, inner sep=3pt},
+			% >=Latex
+		]
+		\node[io] (X) {$\mathbf{X}$, признаки};
+		\node[mdl, below left=12mm and 18mm of X] (m1) {Модель 1};
+		\node[mdl, below=12mm of X] (m2) {Модель 2};
+		\node[mdl, below right=12mm and 18mm of X] (m3) {Модель 3};
+		\draw[->] (X) -- (m1);
+		\draw[->] (X) -- (m2);
+		\draw[->] (X) -- (m3);
+
+		\node[io, below=16mm of m2] (Z) {OOF-признаки: $\hat y^{(1)},\hat y^{(2)},\hat y^{(3)}$};
+		\draw[->] (m1) -- (Z);
+		\draw[->] (m2) -- (Z);
+		\draw[->] (m3) -- (Z);
+
+		\node[meta, below=14mm of Z] (meta) {Мета-модель};
+		\draw[->] (Z) -- (meta);
+
+		\node[io, below=12mm of meta] (yhat) {Итоговое предсказание};
+		\draw[->] (meta) -- (yhat);
+	\end{tikzpicture}
+\end{frame}
+
+\begin{frame}{Когда что выбирать? (кратко)}
+	\begin{itemize}
+		\item \textbf{Случайный лес (бэггинг)} — сильная «база без тюнинга», устойчив к шуму, быстро стартует.
+		\item \textbf{Бустинг} — лидер по качеству на табличных задачах при грамотной настройке.
+		\item \textbf{Стэкинг} — когда есть \textbf{разнородные} сильные базовые модели, и вы хотите выжать максимум.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Ансамбли: плюсы/минусы и гиперпараметры}
+	\begin{columns}[T]
+		\begin{column}{0.48\textwidth}
+			\textbf{Плюсы}
+			\begin{itemize}
+				\item Выше качество, чем у одного дерева.
+				\item Снижение дисперсии (бэггинг) и/или смещения (бустинг).
+				\item Гибкость стэкинга.
+			\end{itemize}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\textbf{Минусы}
+			\begin{itemize}
+				\item Меньше интерпретируемость.
+				\item Дольше обучение и инференс.
+				\item Нужна аккуратная валидация (особенно для стэкинга).
+			\end{itemize}
+		\end{column}
+	\end{columns}
+	\vspace{2mm}
+	\textbf{Частые параметры:} \texttt{n\_estimators}, \texttt{learning\_rate}, \texttt{max\_depth}, \texttt{max\_features}, \texttt{subsample}/\texttt{colsample}.
+\end{frame}
 \end{document}
