@@ -1,0 +1,245 @@
+\documentclass[12pt]{beamer}
+
+\usetheme{Madrid}
+\usecolortheme{seahorse}
+\usefonttheme{professionalfonts}
+
+\usepackage[T2A]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[russian]{babel}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{booktabs}
+\usepackage{tikz}
+\usetikzlibrary{trees,positioning}
+
+\title[Решающие деревья]{Решающие деревья: простая и понятная модель}
+\author{Лазар В. И., Козлова Е. Р.}
+\date{\today}
+
+\begin{document}
+
+%----------------------------- Title ---------------------------------
+\begin{frame}
+	\titlepage
+\end{frame}
+
+%----------------------------- Plan ----------------------------------
+\section{Интуиция и постановка задач}
+
+\begin{frame}{Зачем дерево?}
+	\begin{itemize}
+		\item \textbf{Идея дерева}: задаём последовательность простых вопросов вида «Признак $x_j$ больше порога?».
+		\item Итог — путь от \textbf{корня} к \textbf{листу} даёт решение.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Части решающего дерева}
+	\begin{itemize}
+		\item \textbf{Узел} — проверка правила (например, $x_j \le t$).
+		\item \textbf{Рёбра} — варианты ответа («да»/«нет»).
+		\item \textbf{Лист} — предсказание: класс (классификация) или число (регрессия).
+		\item \textbf{Глубина} — максимальное число вопросов от корня до листа.
+	\end{itemize}
+\end{frame}
+
+\section{Наглядный пример}
+
+\begin{frame}{Мини-пример дерева (погода и прогулка)}
+	\centering
+	\begin{tikzpicture}[
+			level 1/.style={sibling distance=48mm, level distance=16mm},
+			level 2/.style={sibling distance=32mm, level distance=18mm},
+			every node/.style={align=center, font=\small},
+			decision/.style={draw, rounded corners, fill=blue!10, inner sep=3pt},
+			action/.style={draw, rounded corners, inner sep=3pt}
+		]
+		\node[decision]{Осадки?}
+		child { node[action, fill=green!10]{Взять зонт\\и идти гулять}
+				edge from parent node[left]{да}}
+		child { node[decision]{Ветер $> 7$ м/с?}
+				child { node[action, fill=red!10]{Остаться дома}
+						edge from parent node[left]{да}}
+				child { node[action, fill=green!10]{Идти гулять}
+						edge from parent node[right]{нет}}
+				edge from parent node[right]{нет}};
+	\end{tikzpicture}
+\end{frame}
+
+\section{Инференс (предсказание)}
+
+\begin{frame}{Как дерево делает предсказание (инференс)}
+	\textbf{Шаги:}
+	\begin{enumerate}
+		\item Стартуем в корне.
+		\item Проверяем условие в узле (например, $x_j \le t$).
+		\item Идём по ветке «да» или «нет» в следующий узел.
+		\item Повторяем, пока не попадём в лист.
+		\item В листе берём предсказание: \\
+		      \quad классификация — самый частый класс в листе; \\
+		      \quad регрессия — среднее значение ответов в листе.
+	\end{enumerate}
+	\vspace{3mm}
+	\textbf{Сложность:} $O(\text{глубина})$ проверок на один объект.
+\end{frame}
+
+\section{Качество разбиений}
+
+\begin{frame}{Критерии для классификации}
+	Пусть в узле есть выборка $S$ с долями классов $p_1,\dots,p_K$.
+	\begin{block}{Индекс Джини}
+		\[
+			\mathrm{Gini}(S) = 1 - \sum_{k=1}^{K} p_k^2
+		\]
+	\end{block}
+	\begin{block}{Энтропия}
+		\[
+			H(S) = - \sum_{k=1}^{K} p_k \log_2 p_k
+		\]
+	\end{block}
+\end{frame}
+\begin{frame}
+	\begin{block}{Прирост информации (качество сплита по признаку $x_j$ и порогу $t$)}
+		Пусть разбиение даёт дочерние множества $S_L, S_R$. Тогда
+		\[
+			\Delta = \mathrm{Impurity}(S) - \frac{|S_L|}{|S|}\mathrm{Impurity}(S_L) - \frac{|S_R|}{|S|}\mathrm{Impurity}(S_R),
+		\]
+		где $\mathrm{Impurity}$ — Gini или энтропия. Чем больше $\Delta$, тем лучше сплит.
+	\end{block}
+\end{frame}
+
+\begin{frame}{Критерии для регрессии}
+	Пусть ответы в узле — $y_1,\dots,y_n$, среднее $\bar y$.
+	\begin{block}{Среднеквадратичная ошибка (MSE) в узле}
+		\[
+			\mathrm{MSE}(S) = \frac{1}{|S|}\sum_{i=1}^{|S|} (y_i - \bar y)^2
+		\]
+	\end{block}
+	\begin{block}{Снижение ошибки при сплите}
+		\[
+			\Delta = \mathrm{MSE}(S) - \frac{|S_L|}{|S|}\mathrm{MSE}(S_L) - \frac{|S_R|}{|S|}\mathrm{MSE}(S_R).
+		\]
+		Выбираем признак и порог с максимальным $\Delta$.
+	\end{block}
+\end{frame}
+
+\section{Алгоритм обучения}
+
+\begin{frame}{Идея обучения (жадно, сверху вниз)}
+	\begin{enumerate}
+		\item В текущем узле перебираем \textbf{кандидатные сплиты}: признаки и пороги.
+		\item Считаем \textbf{снижение нечистоты} $\Delta$ (Gini/энтропия для классификации, MSE для регрессии).
+		\item Берём \textbf{лучший} сплит. Разделяем выборку на $S_L$ и $S_R$.
+		\item Рекурсивно повторяем для дочерних узлов.
+		\item Останавливаемся по критериям: достигнута \textbf{макс. глубина}, мало объектов в узле, \textbf{улучшение незначительно} и т.п.
+		\item (Опционально) \textbf{Обрезаем} дерево (pruning), чтобы уменьшить переобучение.
+	\end{enumerate}
+\end{frame}
+
+\begin{frame}
+	\small
+	% \begin{block}{}
+	% 	\textbf{Вход:} обучающая выборка $S$, список признаков $\mathcal{F}$, параметры (\texttt{max\_depth}, \texttt{min\_samples\_leaf}, \dots)\\
+	% 	\textbf{Выход:} решающее дерево $T$
+	% \end{block}
+
+	\begin{enumerate}
+		\item Функция \textsc{GrowNode}$(S, depth)$:
+		      \begin{enumerate}
+			      \item Если \texttt{depth} $\ge$ \texttt{max\_depth} \textbf{или} $|S| <$ \texttt{min\_samples\_leaf} \textbf{или} все объекты одного класса:
+			            \begin{itemize}
+				            \item создать \textbf{лист} с предсказанием (мода класса / среднее $y$).
+				            \item вернуть лист.
+			            \end{itemize}
+			      \item Иначе: для каждого признака $x_j \in \mathcal{F}$ и порога $t$ из кандидатов:
+			            \begin{itemize}
+				            \item разбить $S$ на $S_L=\{x: x_j \le t\}$ и $S_R=\{x: x_j > t\}$,
+				            \item вычислить $\Delta(x_j,t)$ (снижение нечистоты).
+			            \end{itemize}
+			      \item Выбрать $(j^*, t^*) = \arg\max \Delta(x_j,t)$. Если улучшение слишком мало — сделать лист.
+			      \item Рекурсивно построить детей: \textsc{GrowNode}$(S_L, depth+1)$ и \textsc{GrowNode}$(S_R, depth{+}1)$.
+			      \item Вернуть внутренний узел $(x_{j^*}\le t^*)$ с привязанными детьми.
+		      \end{enumerate}
+		\item Корень: \textsc{GrowNode}$(S,0)$.
+		\item (Опц.) Пост-обрезка по стоимости сложности: минимизируем $R_\alpha(T)=R(T)+\alpha|T|$.
+	\end{enumerate}
+\end{frame}
+
+\section{Практические аспекты}
+
+\begin{frame}{Работа с признаками}
+	\begin{itemize}
+		\item \textbf{Числовые:} ищем пороги $t$ (часто по отсортированным значениям).
+		\item \textbf{Категориальные:} бинарные сплиты по подмножествам категорий (или one-hot кодирование).
+		\item \textbf{Пропуски:} простой вариант — заполнять медианой/модой; продвинутый — surrogate splits.
+		\item \textbf{Масштабирование:} деревьям в целом не требуется нормировка признаков.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Переобучение и как с ним бороться}
+	\begin{itemize}
+		\item Глубокие деревья могут \textbf{запоминать} данные.
+		\item \textbf{Пред-обрезка} (pre-pruning): ограничить \texttt{max\_depth}, \texttt{min\_samples\_leaf}, \texttt{min\_impurity\_decrease}.
+		\item \textbf{Пост-обрезка} (post-pruning): удалять ветви, если они почти не улучшают качество (например, по $R_\alpha(T)$).
+		\item \textbf{Валидация}: отложенная выборка или кросс-валидация, чтобы выбрать параметры.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Сложность и масштабируемость}
+	\begin{itemize}
+		\item \textbf{Обучение:} при аккуратной реализации около $O(n\,d\log n)$, где $n$ — объектов, $d$ — признаков.
+		\item \textbf{Инференс:} $O(\text{глубина})$ проверок на объект.
+		\item Хорошо работают на табличных данных, устойчивы к монотонным преобразованиям признаков.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Плюсы и минусы}
+	\begin{columns}[T]
+		\begin{column}{0.48\textwidth}
+			\textbf{Плюсы}
+			\begin{itemize}
+				\item Понятны и интерпретируемы.
+				\item Не требуют масштабирования.
+				\item Умеют смешивать числовые и категориальные признаки.
+				\item Быстрый инференс.
+			\end{itemize}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\textbf{Минусы}
+			\begin{itemize}
+				\item Склонность к переобучению без обрезки.
+				\item Нестабильность при малых изменениях данных.
+				\item Пороги — кусочно-постоянные решения (ступеньки).
+			\end{itemize}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+\section{Мини-пример расчёта}
+
+\begin{frame}{Пример: классификация (индекс Джини)}
+	В узле 20 объектов: 12 «положительный» и 8 «отрицательный» классы. \\
+	\[
+		\mathrm{Gini}(S) = 1 - \left(\frac{12}{20}\right)^2 - \left(\frac{8}{20}\right)^2
+		= 1 - 0.36 - 0.16 = 0.48.
+	\]
+	После сплита получили:
+	\[
+		|S_L|=10:~(8^+,2^-) \Rightarrow \mathrm{Gini}(S_L)=1-0.64-0.04=0.32, \quad
+		|S_R|=10:~(4^+,6^-) \Rightarrow \mathrm{Gini}(S_R)=1-0.16-0.36=0.48.
+	\]
+	Взвешенная нечистота:
+	\[
+		\frac{10}{20}\cdot 0.32 + \frac{10}{20}\cdot 0.48 = 0.40.
+	\]
+	Прирост: $\Delta = 0.48 - 0.40 = 0.08$. Чем больше $\Delta$, тем лучше сплит.
+\end{frame}
+
+\begin{frame}{Ключевые гиперпараметры}
+	\begin{itemize}
+		\item \texttt{criterion}: \texttt{gini} / \texttt{entropy} (классификация), \texttt{mse} (регрессия).
+		\item \texttt{max\_depth}, \texttt{min\_samples\_leaf}, \texttt{min\_impurity\_decrease}.
+		\item \texttt{max\_features}: ограничение числа признаков при выборе сплита.
+	\end{itemize}
+\end{frame}
+
+\end{document}
