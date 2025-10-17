@@ -1,0 +1,293 @@
+\documentclass[aspectratio=169]{beamer}
+% --- Русская локаль и базовые пакеты ---
+\usepackage[T2A]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[russian]{babel}
+
+% --- Математика и рисунки ---
+\usepackage{amsmath, amssymb, mathtools}
+\usepackage{bm}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, calc, decorations.pathreplacing, shapes.geometric}
+% Безопасно избегаем тяжёлых пакетов (minted/algorithm2e)
+
+% --- Оформление ---
+\usetheme{Madrid}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{itemize items}[circle]
+\setbeamertemplate{enumerate items}[default]
+\setbeamertemplate{footline}[frame number]
+\definecolor{accent}{RGB}{36,106,180}
+\definecolor{muted}{RGB}{85,85,85}
+\setbeamercolor{structure}{fg=accent}
+
+% --- Титульные данные ---
+\title[Градиентный бустинг]{Бустинг \\ \large Градиентный бустинг над решающими деревьями}
+\author[Лазар В. И., Козлова Е. Р.]{Лазара В. И. \and Козлова Е. Р.}
+\institute{Лекция по машинному обучению}
+\date{\today}
+
+% --- Вспомогательные команды ---
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Loss}{\mathcal{L}}
+\newcommand{\data}{\mathcal{D}}
+\newcommand{\lr}{\nu} % learning rate
+\newcommand{\sign}{\operatorname{sign}}
+
+% ---------- НАЧАЛО ДОКУМЕНТА ----------
+\begin{document}
+
+% Титульный слайд
+\begin{frame}
+	\titlepage
+\end{frame}
+
+% Напоминание: ансамбли
+\begin{frame}{Напоминание: бэггинг vs стэкинг vs бустинг}
+	\begin{columns}[T,onlytextwidth]
+		\column{0.58\textwidth}
+		\begin{block}{Коротко}
+			\begin{itemize}
+				\item \textbf{Бэггинг} (Bootstrap Aggregating): параллельные независимые модели на бутстрап-подвыборках, усреднение/голосование $\Rightarrow$ снижение дисперсии.
+				\item \textbf{Стэкинг}: мета-модель учится комбинировать ответы базовых моделей.
+				\item \textbf{Бустинг}: \textit{последовательно} добавляем слабые модели, каждая исправляет ошибки предыдущих $\Rightarrow$ снижение смещения.
+			\end{itemize}
+		\end{block}
+		\column{0.42\textwidth}
+		% Схема сравнения
+		\centering
+		\begin{tikzpicture}[>=Latex, node distance=6mm, scale=0.9, every node/.style={scale=0.9}]
+			% Bagging
+			\node[draw, rounded corners, align=center, fill=white] (b0) {Датасет};
+			\node[draw, rounded corners, below=of b0, xshift=-1.8cm] (b1) {Модель 1};
+			\node[draw, rounded corners, below=of b0] (b2) {Модель 2};
+			\node[draw, rounded corners, below=of b0, xshift=1.8cm] (b3) {Модель 3};
+			\node[draw, thick, rounded corners, fill=accent!10, below=of b2] (bag) {Усреднение};
+			\draw[->] (b0) -- (b1) node[midway, left, sloped]{};
+			\draw[->] (b0) -- (b2) node[midway, right, sloped]{};
+			\draw[->] (b0) -- (b3) node[midway, right, sloped]{};
+			\draw[->] (b1) -- (bag);
+			\draw[->] (b2) -- (bag);
+			\draw[->] (b3) -- (bag);
+
+			% Boosting miniature
+			\begin{scope}[xshift=5.9cm, yshift=-0.3cm]
+				\node[draw, rounded corners] (x0) {Модель 1};
+				\node[draw, rounded corners, right=1.6cm of x0] (x1) {Модель 2};
+				\node[draw, rounded corners, right=1.6cm of x1] (x2) {Модель 3};
+				\node[draw, thick, rounded corners, fill=accent!10, right=1.8cm of x2] (sum) {Сумма};
+				\draw[->] (x0) -- node[above]{ошибки} (x1);
+				\draw[->] (x1) -- node[above]{ошибки} (x2);
+				\draw[->] (x0) |- (sum);
+				\draw[->] (x1) |- (sum);
+				\draw[->] (x2) -- (sum);
+				\node[above=4mm of x0, align=center, text width=3cm]{\small Бустинг: \\ последовательное исправление};
+			\end{scope}
+		\end{tikzpicture}
+	\end{columns}
+\end{frame}
+
+% Интуиция бустинга
+\begin{frame}{Интуиция бустинга: исправление ошибок}
+	\begin{itemize}
+		\item Модель $F_0(x)$ грубо приближает зависимость.
+		\item Вычисляем \textbf{ошибки/остатки} и обучаем следующую слабую модель $h_1(x)$ предсказывать эти ошибки.
+		\item Новая модель: $F_1(x)=F_0(x)+\lr h_1(x)$, где $\lr\in(0,1]$ — \textit{скорость обучения}.
+		\item Повторяем $M$ раз: $F_M(x)=F_{M-1}(x)+\lr h_M(x)$.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}
+	% Схема: данные -> базовая модель -> остатки -> дерево -> обновление
+	\begin{tikzpicture}[>=Latex, node distance=8mm]
+		\tikzstyle{b}=[draw, rounded corners, align=center, fill=white]
+		\node[b] (d) {Данные $(x_i,y_i)$};
+		\node[b, right=2.2cm of d] (f0) {Базовая модель $F_0$};
+		\node[b, below=of f0] (res) {Остатки $r_i$};
+		\node[b, right=2.2cm of res] (h1) {Слабая модель $h_1$ (дерево)};
+		\node[b, above=of h1] (upd) {$F_1=F_0+\lr h_1$};
+		\draw[->] (d) -- (f0);
+		\draw[->] (f0) -- node[right]{\small $r_i=y_i-F_0(x_i)$} (res);
+		\draw[->] (res) -- (h1);
+		\draw[->] (h1) -- (upd);
+	\end{tikzpicture}
+\end{frame}
+
+% Градиентный взгляд
+\begin{frame}{Градиентный бустинг: оптимизация в пространстве функций}
+	\begin{block}{Задача}
+		Дана выборка $\data=\{(x_i,y_i)\}_{i=1}^n$, хотим минимизировать
+		\[
+			\Loss(F)=\sum_{i=1}^n \ell\!\big(y_i, F(x_i)\big),
+		\]
+		где $F$ — искомая функция, а $\ell$ — выбранная функция потерь.
+	\end{block}
+	\begin{block}{Идея}
+		Выполняем \textbf{градиентный спуск по $F$}: на шаге $m$ подбираем слабую модель $h_m$,
+		хорошо аппроксимирующую \emph{антиградиент} по значениям $F$ на обучающих объектах:
+		\[
+			g_{im} \;=\; \left.\frac{\partial \ell(y_i, z)}{\partial z}\right|_{z=F_{m-1}(x_i)},
+			\qquad
+			\text{учим } h_m \approx -g_{im}\text{ по }x_i.
+		\]
+		Затем обновляем $F_m(x)=F_{m-1}(x)+\lr\,\gamma_m\,h_m(x)$
+	\end{block}
+\end{frame}
+
+% Бустинг над деревьями: суть шага
+\begin{frame}{Бустинг над деревьями: шаг обучения}
+	\begin{enumerate}
+		\item Дано $F_{m-1}$. Считаем \textbf{псевдо-остатки} (антиградиенты):
+		      \[
+			      r_{im} \;=\; - \left.\frac{\partial \ell(y_i, z)}{\partial z}\right|_{z=F_{m-1}(x_i)}.
+		      \]
+		\item Обучаем регрессионное дерево $h_m(x)$ по парам $\big(x_i, r_{im}\big)$.
+		\item Находим оптимальные константы по листам: для каждого листа $R_{jm}$
+		      \[
+			      \gamma_{jm} \;=\; \arg\min_{\gamma}\ \sum_{x_i\in R_{jm}} \ell\!\big(y_i,\, F_{m-1}(x_i)+\gamma\big).
+		      \]
+		\item Обновляем модель:
+		      \[
+			      F_m(x) \;=\; F_{m-1}(x) + \lr \sum_{j} \gamma_{jm}\,\mathbf{1}\{x\in R_{jm}\}.
+		      \]
+	\end{enumerate}
+\end{frame}
+
+% Псевдокод
+\begin{frame}{Градиентный бустинг над деревьями: псевдокод}
+	\begin{block}{Вход}
+		$\data=\{(x_i,y_i)\}_{i=1}^n$, функция потерь $\ell(y, z)$, число итераций $M$, глубина дерева $d$, скорость обучения $\lr$.
+	\end{block}
+	\begin{block}{Алгоритм}
+		\vspace{-1mm}
+		\begin{itemize}
+			\item Инициализация: $F_0(x) = \arg\min_{c}\sum_{i=1}^n \ell(y_i, c)$ \ (например, среднее для MSE, логит-квантиль для логлосса).
+			\item Для $m=1,\dots,M$:
+			      \begin{enumerate}
+				      \item Вычислить $r_{im}=-\partial \ell(y_i,z)/\partial z\,\big|_{z=F_{m-1}(x_i)}$.
+				      \item Обучить регрессионное дерево $h_m$ глубины $\le d$ на $\{(x_i, r_{im})\}$.
+				      \item Для каждого листа $R_{jm}$ найти $\gamma_{jm}=\arg\min_{\gamma}\sum_{x_i\in R_{jm}}\ell\!\big(y_i, F_{m-1}(x_i)+\gamma\big)$.
+				      \item Обновить $F_m(x)=F_{m-1}(x)+\lr\sum_j \gamma_{jm}\mathbf{1}\{x\in R_{jm}\}$.
+			      \end{enumerate}
+		\end{itemize}
+	\end{block}
+\end{frame}
+
+% Регрессия и классификация
+\begin{frame}{Выбор потерь: регрессия и классификация}
+	\begin{columns}[T,onlytextwidth]
+		\column{0.52\textwidth}
+		\textbf{Регрессия}
+		\begin{itemize}
+			\item Квадратичная: $\ell(y,z)=\tfrac12(y-z)^2$ \ $\Rightarrow$ $r_{im}=y_i-F_{m-1}(x_i)$ (классические «остатки»).
+			\item Абсолютная: $\ell(y,z)=|y-z|$ \ $\Rightarrow$ $r_{im}=\sign\!\big(y_i-F_{m-1}(x_i)\big)$ (в слабом смысле).
+		\end{itemize}
+		\column{0.48\textwidth}
+		\textbf{Классификация (бинарная)}
+		\begin{itemize}
+			\item Логистическая потеря: $y\in\{0,1\}$, логиты $F(x)$, $p(x)=\sigma(F(x))$.
+			      \[
+				      \ell(y,z)= -\big(y\log \sigma(z) + (1-y)\log(1-\sigma(z))\big).
+			      \]
+			\item Псевдо-остатки: $r_{im} = y_i - \sigma\!\big(F_{m-1}(x_i)\big)$.
+			\item Итог: решение выдаём как $\mathbb{I}\{F_M(x)\ge 0\}$ или по $p(x)$.
+		\end{itemize}
+	\end{columns}
+\end{frame}
+
+% Иллюстрация: последовательное добавление деревьев
+\begin{frame}{Иллюстрация: «слоёный пирог» из деревьев}
+	\centering
+	\begin{tikzpicture}[>=Latex, node distance=7mm]
+		\tikzstyle{lay}=[draw, rounded corners, minimum width=8.8cm, minimum height=0.8cm, fill=accent!8]
+		\node[lay] (f0) {$F_0(x)$};
+		\node[lay, below=of f0] (h1) {$+\ \lr\,h_1(x)$ \ (исправление первых ошибок)};
+		\node[lay, below=of h1] (h2) {$+\ \lr\,h_2(x)$ \ (исправление новых ошибок)};
+		\node[lay, below=of h2] (h3) {$+\ \lr\,h_3(x)$ \ (и так далее)};
+		\node[draw, very thick, rounded corners, below=of h3, minimum width=9.2cm, minimum height=1.0cm, fill=accent!15] (sum) {$F_M(x)=F_0(x)+\sum_{m=1}^M \lr\,h_m(x)$};
+		\draw[->] (f0) -- (h1);
+		\draw[->] (h1) -- (h2);
+		\draw[->] (h2) -- (h3);
+		\draw[->] (h3) -- (sum);
+	\end{tikzpicture}
+	\vspace{2mm}
+
+	\small Каждое дерево — слабое (мелкое, с малым числом листьев), но сумма даёт сильную модель.
+\end{frame}
+
+% Регуляризация
+\begin{frame}{Регуляризация и борьба с переобучением}
+	\begin{itemize}
+		\item \textbf{Скорость обучения} (\textit{shrinkage}) $\lr\in(0,1]$: меньше $\Rightarrow$ устойчивее, но нужно больше деревьев.
+		\item \textbf{Глубина дерева / число листьев}: неглубокие деревья (3–8 уровней) $\Rightarrow$ слабые базовые модели.
+		\item \textbf{Субсемплинг объектов} (\texttt{subsample}): обучаем $h_m$ на случайной доле данных (напр., $0.5$–$0.9$).
+		\item \textbf{Субсемплинг признаков}: случайный поднабор признаков на сплите/уровне/дереве.
+		\item \textbf{Минимальный размер листа}, \textbf{L2-штраф на веса листов}, \textbf{макс. число узлов}.
+		\item \textbf{Ранняя остановка} по валидации: мониторим метрику и прекращаем рост $M$.
+	\end{itemize}
+\end{frame}
+
+% Стохастический бустинг
+\begin{frame}{Стохастический градиентный бустинг}
+	\begin{block}{Идея}
+		На каждом шаге используем случайную подвыборку объектов (и, опционально, признаков).
+	\end{block}
+	\begin{itemize}
+		\item Снижает коррелированность базовых деревьев, улучшая обобщающую способность.
+		\item Даёт ускорение и повышает устойчивость к шуму.
+		\item Хорошо комбинируется с малым $\lr$ и ранней остановкой.
+	\end{itemize}
+\end{frame}
+
+% Практические системы
+\begin{frame}{Практика: XGBoost, LightGBM, CatBoost}
+	\begin{itemize}
+		\item \textbf{XGBoost}: точный/приближённый поиск сплитов, регуляризация (L1/L2), колонки по блокам, эффективная параллелизация.
+		\item \textbf{LightGBM}: лист-ориентированный рост (\textit{leaf-wise}) с ограничением глубины, гистограммные сплиты, \textit{Gradient-based One-Side Sampling}.
+		\item \textbf{CatBoost}: обработка категориальных признаков порядковыми статистиками, упор на устойчивость к \textit{target leakage}.
+	\end{itemize}
+	\begin{block}{Замечание}
+		Хотя детали реализации различаются, базовая идея — тот же градиентный бустинг над деревьями.
+	\end{block}
+\end{frame}
+
+% Диагностика переобучения
+\begin{frame}{Диагностика: как понять, что мы переобучаемся}
+	\begin{itemize}
+		\item Разрыв между train и valid метриками растёт со временем $\Rightarrow$ остановиться раньше.
+		\item Локальные всплески ошибки при слишком глубоком дереве.
+		\item Слишком малый \textit{subsample} может добавить шум (слишком большой — повысит корреляцию базовых моделей).
+	\end{itemize}
+\end{frame}
+
+% Сравнение с бэггингом/стэкингом
+\begin{frame}{Сравнение: бустинг vs бэггинг/стэкинг}
+	\begin{columns}[T,onlytextwidth]
+		\column{0.5\textwidth}
+		\textbf{Бустинг}
+		\begin{itemize}
+			\item Последовательный, корректирует смещение.
+			\item Высокая предсказательная сила «из коробки».
+			\item Чувствителен к шуму/выбросам (важна регуляризация).
+		\end{itemize}
+		\column{0.5\textwidth}
+		\textbf{Бэггинг/Стэкинг}
+		\begin{itemize}
+			\item Бэггинг — параллельный, снижает дисперсию.
+			\item Стэкинг — мета-комбинация, требует аккуратной валидации.
+			\item Часто менее чувствительны к отдельным выбросам.
+		\end{itemize}
+	\end{columns}
+\end{frame}
+
+% Итоги
+\begin{frame}{Итоги}
+	\begin{itemize}
+		\item Бустинг — \textbf{последовательное уменьшение смещения} путём добавления слабых моделей.
+		\item Градиентный бустинг — \textbf{градиентный спуск в пространстве функций} по выбранной потере.
+		\item Деревья — удобные слабые модели: быстрые, интерпретируемые на уровне сплитов.
+		\item Ключ — \textbf{регуляризация}: шринкаж, ранняя остановка, контроль сложности деревьев и стохастичность.
+	\end{itemize}
+\end{frame}
+
+\end{document}
