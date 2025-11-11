@@ -1,0 +1,290 @@
+\documentclass[aspectratio=169]{beamer}
+
+% ---------- Russian + math ----------
+\usepackage[T2A]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[russian]{babel}
+\usepackage{amsmath, amssymb, mathtools}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{listings}
+
+% ---------- Beamer theme ----------
+\usetheme{Madrid}
+\usecolortheme{default}
+\setbeamertemplate{navigation symbols}{}
+
+% ---------- Listings (Python) ----------
+\lstdefinestyle{py}{
+  language=Python,
+  basicstyle=\ttfamily\small,
+  keywordstyle=\bfseries\color{blue!60!black},
+  commentstyle=\itshape\color{gray!70!black},
+  showstringspaces=false,
+  columns=fullflexible,
+  frame=single,
+  framerule=0.4pt,
+  breaklines=true,
+  tabsize=2
+}
+\lstset{style=py}
+
+% ---------- Title ----------
+\title{Введение в машинное обучение}
+\subtitle{Лекция: Кластеризация и снижение размерности (SVD, PCA)}
+\author{Лазар В.~И.\ и Козлова Е.~Р.}
+
+% ---------- Helpers ----------
+\newcommand{\term}[1]{\textbf{#1}}
+\newcommand{\R}{\mathbb{R}}
+
+\begin{document}
+
+% ---------- Title slide ----------
+\begin{frame}
+	\titlepage
+\end{frame}
+
+% ---------- Plan ----------
+\begin{frame}{План занятия}
+	\begin{enumerate}
+		\item Что такое «обучение без учителя».
+		\item \term{Кластеризация}: идеи и алгоритмы
+		      \begin{itemize}
+			      \item K-Means
+			      \item DBSCAN
+			      \item Иерархическая (агломеративная) кластеризация
+		      \end{itemize}
+		\item \term{Снижение размерности}:
+		      \begin{itemize}
+			      \item SVD — сингулярное разложение
+			      \item PCA — метод главных компонент
+		      \end{itemize}
+		\item Практические советы, мини-упражнения, ответы на вопросы.
+	\end{enumerate}
+\end{frame}
+
+% ---------- Intro: Unsupervised ----------
+\begin{frame}{Обучение без учителя (интуиция)}
+	\begin{itemize}
+		\item Даны только объекты (точки, картинки, тексты), \emph{без меток ответов}.
+		\item Хотим: \term{найти структуру} в данных.
+		\item Две базовые задачи:
+		      \begin{enumerate}
+			      \item \term{Кластеризация} — разбить объекты на «похожие группы».
+			      \item \term{Снижение размерности} — «упростить» данные, сохранив самое важное.
+		      \end{enumerate}
+	\end{itemize}
+\end{frame}
+
+% =======================
+% K-MEANS
+% =======================
+\begin{frame}{Кластеризация: K-Means — идея}
+	\begin{itemize}
+		\item Выбираем число групп \(K\).
+		\item Каждая группа описывается центром (\term{центроидом}).
+		\item Алгоритм стремится «поставить» центры так, чтобы точки были ближе к своим центрам, чем к чужим.
+		\item Мера близости — обычно евклидово расстояние.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{K-Means — пошаговый алгоритм}
+	\begin{enumerate}
+		\item \term{Инициализация}: выбрать \(K\) начальных центров (лучше \(\text{k-means++}\)).
+		\item \term{Шаг присвоения}: каждую точку отнести к ближайшему центру.
+		\item \term{Шаг пересчёта}: для каждого кластера посчитать новый центр как среднее своих точек.
+		\item Повторять шаги 2–3, пока центры почти не меняются (\term{сходимость}).
+	\end{enumerate}
+	\vspace{0.5em}
+	\[
+		\text{Целевая функция: }
+		\min_{\text{кластеры}} \sum_{i=1}^{n} \left\|x_i - \mu_{c(i)}\right\|^2
+	\]
+	где \(x_i\) — точка, \(\mu_{c(i)}\) — центр её кластера.
+\end{frame}
+
+\begin{frame}{K-Means — плюсы и минусы}
+	\begin{columns}[T]
+		\begin{column}{0.52\textwidth}
+			\textbf{Плюсы}
+			\begin{itemize}
+				\item Простой и быстрый.
+				\item Понятная геометрическая идея.
+				\item Хорош для «круглых» кластеров схожего размера.
+			\end{itemize}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\textbf{Минусы}
+			\begin{itemize}
+				\item Нужно знать \(K\) заранее.
+				\item Плохо с «некруглыми» формами и разной плотностью.
+				\item Чувствителен к масштабам признаков и выбросам.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+	\vspace{0.5em}
+	\textbf{Практика:} перед K-Means часто делают стандартизацию признаков.
+\end{frame}
+
+% =======================
+% DBSCAN
+% =======================
+\begin{frame}{Кластеризация: DBSCAN — идея}
+	\begin{itemize}
+		\item \term{Density-Based Spatial Clustering of Applications with Noise}.
+		\item Вместо «круглых» групп ищем \term{области высокой плотности}.
+		\item Параметры:
+		      \begin{itemize}
+			      \item \(\varepsilon\) (eps) — «радиус соседства»;
+			      \item \(\text{min\_samples}\) — сколько соседей нужно, чтобы точка считалась «ядром».
+		      \end{itemize}
+		\item Типы точек: \term{ядро}, \term{пограничная}, \term{шум}.
+		\item Число кластеров получается автоматически.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{DBSCAN — плюсы и минусы}
+	\begin{columns}[T]
+		\begin{column}{0.52\textwidth}
+			\textbf{Плюсы}
+			\begin{itemize}
+				\item Находит \emph{кластеры произвольной формы}.
+				\item Не требует знать число кластеров.
+				\item Устойчив к выбросам (помечает как шум).
+			\end{itemize}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\textbf{Минусы}
+			\begin{itemize}
+				\item Нужно подбирать \(\varepsilon\) и \(\text{min\_samples}\).
+				\item Трудно при сильно неоднородной плотности.
+				\item Чувствителен к масштабу признаков.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% =======================
+% Agglomerative
+% =======================
+\begin{frame}{Иерархическая (агломеративная) кластеризация — идея}
+	\begin{itemize}
+		\item Стартуем: каждый объект — свой кластер.
+		\item На каждом шаге \term{сливаем} две наиболее близкие группы.
+		\item Выбор «близости» групп — это \term{связь (linkage)}:
+		      \begin{itemize}
+			      \item \term{single} — ближайшие точки;
+			      \item \term{complete} — самые дальние точки;
+			      \item \term{average} — среднее расстояние;
+			      \item \term{Ward} — минимизируем рост дисперсии.
+		      \end{itemize}
+		\item Получаем \term{дендрограмму}; «отрезаем» на нужной высоте — получаем кластеры.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Иерархическая кластеризация — плюсы и минусы}
+	\begin{columns}[T]
+		\begin{column}{0.52\textwidth}
+			\textbf{Плюсы}
+			\begin{itemize}
+				\item Дает \emph{иерархию} — разные уровни детализации.
+				\item Не обязательно заранее задавать \(K\).
+				\item Гибкость выбора метрики и связей.
+			\end{itemize}
+		\end{column}
+		\begin{column}{0.48\textwidth}
+			\textbf{Минусы}
+			\begin{itemize}
+				\item Память/время \(\sim n^2\) — трудно для очень больших данных.
+				\item Ранние «неудачные» слияния уже не откатить.
+			\end{itemize}
+		\end{column}
+	\end{columns}
+\end{frame}
+
+% =======================
+% Comparison table
+% =======================
+\begin{frame}{Коротко: что выбрать?}
+	\small
+	\begin{tabular}{@{}p{3.1cm} p{3.3cm} p{3.3cm} p{3.3cm}@{}}
+		\toprule
+		                  & \textbf{K-Means}             & \textbf{DBSCAN}               & \textbf{Иерархическая}             \\
+		\midrule
+		Форма кластеров   & «Круглые», схожие по размеру & Любые формы, плотностные      & Любые, зависит от метрики/связи    \\
+		Заранее \(K\)?    & Да                           & Нет                           & Необязательно (режем дендрограмму) \\
+		Выбросы           & Чувствителен                 & Устойчив (шум = -1)           & Зависит от метрики                 \\
+		Гиперпараметры    & \(K\), инициализация         & \(\varepsilon\), min\_samples & Связь (linkage), «высота среза»    \\
+		Масштаб признаков & Важно                        & Важно                         & Важно                              \\
+		Сложность         & Быстрый                      & Средний                       & \(O(n^2)\) по памяти/времени       \\
+		\bottomrule
+	\end{tabular}
+\end{frame}
+
+% =======================
+% Dimensionality reduction
+% =======================
+\begin{frame}{Снижение размерности — зачем?}
+	\begin{itemize}
+		\item Упростить: оставить «главное», убрать шум/избыточность.
+		\item \term{Визуализация}: проецировать высокие измерения на 2D/3D.
+		\item \term{Скорость}: меньше признаков — быстрее обучение.
+		\item \term{Сжатие}: хранить данные компактнее.
+	\end{itemize}
+\end{frame}
+
+% ---------- SVD ----------
+\begin{frame}{SVD — сингулярное разложение (идея)}
+	\begin{itemize}
+		\item Для матрицы \(X \in \R^{n\times d}\):
+		      \[
+			      X = U\,\Sigma\,V^{\top},
+		      \]
+		      где \(U \in \R^{n\times n}\), \(V \in \R^{d\times d}\) — \term{ортогональные} матрицы,
+		      \(\Sigma\) — диагональная с неотрицательными \term{сингулярными значениями} \(\sigma_1 \ge \sigma_2 \ge \dots \ge 0\).
+		\item Геометрия: \(V\) — «направления» в признаковом пространстве, \(\Sigma\) — «силы» по этим направлениям, \(U\) — координаты точек в новых осях.
+		\item Если оставить только первые \(k\) наибольших \(\sigma\), получаем \term{лучшую аппроксимацию} ранга \(k\) (в смысле наименьших квадратов).
+	\end{itemize}
+\end{frame}
+
+% ---------- PCA ----------
+\begin{frame}{PCA — метод главных компонент (интуиция)}
+	\begin{itemize}
+		\item Ищем новые оси, вдоль которых \term{разброс данных (дисперсия)} максимален.
+		\item 1-я главная компонента — направление наибольшей дисперсии, 2-я — следующей и т.д.
+		\item Проекция на первые \(k\) компонент сохраняет «больше всего информации» в смысле дисперсии.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{PCA — пошаговый алгоритм}
+	\begin{enumerate}
+		\item \term{Центрирование}: вычесть среднее из каждого признака.
+		\item (Часто) \term{Стандартизация}: привести признаки к одному масштабу.
+		\item Посчитать ковариационную матрицу \(C = \frac{1}{n-1} X^\top X\) (для центрированного \(X\)).
+		\item Найти собственные векторы/значения \(C\); отсортировать по убыванию.
+		\item Взять первые \(k\) векторов, спроецировать: \(Z = X W_k\).
+	\end{enumerate}
+	\vspace{0.5em}
+	\textbf{Связь с SVD:} если \(X = U\Sigma V^\top\) и \(X\) центрирована, то столбцы \(V\) — направления PCA, а \(\Sigma^2/(n-1)\) — дисперсии компонент.
+\end{frame}
+
+% ---------- SVD code ----------
+
+% =======================
+% Practical tips
+% =======================
+\begin{frame}{Практические советы}
+	\begin{itemize}
+		\item \textbf{Масштабируйте} признаки (StandardScaler), особенно перед K-Means/PCA.
+		\item Для K-Means подберите \(K\): \term{локоть} (elbow) или \term{силуэт}.
+		\item Для DBSCAN подберите \(\varepsilon\) по графику k-ближайших расстояний.
+		\item В PCA смотрите на \term{долю объяснённой дисперсии}; часто берут 90–95\%.
+		\item Удаляйте \term{явные выбросы} или используйте устойчивые алгоритмы (DBSCAN).
+	\end{itemize}
+\end{frame}
+
+\end{document}
